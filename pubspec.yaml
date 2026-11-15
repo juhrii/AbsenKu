@@ -71,6 +71,7 @@ flutter:
     - assets/logo/app_logo_new.png
     - assets/logo/app_icon_navy.png
     - assets/logo/app_icon_square.png
+    - assets/logo/app_icon_splash.png
     - assets/logo/app_logo_dark.jpg
     - assets/logo/app_logo_light.jpg
     - assets/logo/app_logo_terbaru.png

@@ -342,12 +342,12 @@ class _SplashScreenState extends State<SplashScreen>
               ScaleTransition(
                 scale: _scaleAnimation,
                 child: Container(
-                  padding: const EdgeInsets.all(20),
-                  width: 130,
-                  height: 130,
+                  width: 140,
+                  height: 140,
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
+                    borderRadius: BorderRadius.circular(32),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.25),
@@ -356,11 +356,9 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ],
                   ),
-                  child: Center(
-                    child: Image.asset(
-                      'assets/logo/app_icon_square.png',
-                      fit: BoxFit.contain,
-                    ),
+                  child: Image.asset(
+                    'assets/logo/app_icon_splash.png',
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
