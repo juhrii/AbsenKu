@@ -326,12 +326,48 @@ class _ModernSignupScreenState extends State<ModernSignupScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 24),
-                        Image.asset(
-                          'assets/logo/app_logo_light.jpg',
-                          height: 80,
-                          fit: BoxFit.contain,
+                        Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: Image.asset(
+                                'assets/logo/app_icon_square.png',
+                                width: 64,
+                                height: 64,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'ABSENKU',
+                                    style: TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF1B3860),
+                                      letterSpacing: 3,
+                                      height: 1.1,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'PLATFORM ABSENSI SEKOLAH',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF475569),
+                                      letterSpacing: 1.8,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 28),
                         Text(
                           AppLanguage.tr('create_account_title'),
                           style: const TextStyle(

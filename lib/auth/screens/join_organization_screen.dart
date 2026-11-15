@@ -465,12 +465,26 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Image.asset(
-                            'assets/logo/app_logo_light.jpg',
-                            height: 60,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const SizedBox.shrink(),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: Image.asset(
+                              'assets/logo/app_icon_square.png',
+                              width: 72,
+                              height: 72,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const SizedBox.shrink(),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'ABSENKU',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF1B3860),
+                              letterSpacing: 3,
+                            ),
                           ),
                           const SizedBox(height: 24),
                           const Text(
