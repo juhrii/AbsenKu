@@ -13,7 +13,7 @@
     <uses-feature android:name="android.hardware.usb.host" />
 
     <application
-        android:label="Absenmusam"
+        android:label="AbsenKu"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true">
