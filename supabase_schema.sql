@@ -441,6 +441,13 @@ begin
   )
   on conflict (id) do nothing;
 
+  -- Otomatis masukkan user baru ke ORG003 (AbsenKu Utama) sebagai User (role_id = 2)
+  insert into public.organization_members (organization_id, user_id, role_id, is_active)
+  select o.id, new.id, 2, true
+  from public.organizations o
+  where o.code = 'ORG003'
+  on conflict (organization_id, user_id) do nothing;
+
   return new;
 end;
 $$;
