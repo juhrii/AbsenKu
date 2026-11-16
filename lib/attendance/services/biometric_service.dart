@@ -905,19 +905,7 @@ class BiometricService {
   }
 
   Future<bool> hasRegisteredRfid(int organizationMemberId) async {
-    try {
-      final result = await _supabase
-          .from('rfid_cards')
-          .select('id')
-          .eq('organization_member_id', organizationMemberId)
-          .eq('is_active', true)
-          .maybeSingle();
-
-      return result != null;
-    } catch (e) {
-      debugPrint('!!! Supabase RFID Error (ID $organizationMemberId): $e');
-      return false;
-    }
+    return false;
   }
 
   void dispose() {

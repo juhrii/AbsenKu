@@ -44,9 +44,9 @@ class UserProfile {
       lastName: json['last_name'] ?? '',
       displayName: json['display_name'],
       phone: json['phone'],
-      mobile: json['mobile'],
+      mobile: json['mobile'] ?? json['phone'],
       dateOfBirth: json['date_of_birth'] != null ? DateTime.parse(json['date_of_birth']) : null,
-      gender: json['gender'],
+      gender: json['jenis_kelamin'] ?? json['gender'],
       nationality: json['nationality'],
       nationalId: json['national_id'],
       profilePhotoUrl: json['profile_photo_url'],
@@ -58,19 +58,13 @@ class UserProfile {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'employee_code': employeeCode,
       'first_name': firstName,
-      'middle_name': middleName,
       'last_name': lastName,
       'display_name': displayName,
       'phone': phone,
-      'mobile': mobile,
       'date_of_birth': dateOfBirth?.toIso8601String().split('T')[0],
-      'gender': gender,
-      'nationality': nationality,
-      'national_id': nationalId,
+      'jenis_kelamin': gender,
       'profile_photo_url': profilePhotoUrl,
-      'emergency_contact': emergencyContact,
       'is_active': isActive,
     };
   }

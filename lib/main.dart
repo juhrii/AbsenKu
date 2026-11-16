@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:absenku/helpers/language_helper.dart';
 import 'package:absenku/auth/screens/login.dart';
-import 'package:absenku/auth/screens/join_organization_screen.dart';
+import 'package:absenku/auth/screens/onboarding_screen.dart';
 import 'package:absenku/Petugas/screens/petugas_dashboard.dart';
 import 'package:absenku/User/screens/user_dashboard.dart';
 import 'package:absenku/auth/services/role_service.dart';
@@ -239,14 +239,13 @@ class _SplashScreenState extends State<SplashScreen>
 
     final session = Supabase.instance.client.auth.currentSession;
 
-    // Jika tidak ada session, arahkan ke Login
+    // Jika tidak ada session, arahkan ke Onboarding
     if (session == null) {
-      debugPrint('❌ No active session - navigating to Login');
+      debugPrint('❌ No active session - navigating to Onboarding');
       if (!mounted) return;
-      // ✅ DIPERBAIKI: menggunakan pushReplacement dengan context langsung
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const ModernLoginScreen()),
+        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
       );
       return;
     }
@@ -256,26 +255,34 @@ class _SplashScreenState extends State<SplashScreen>
       debugPrint('✅ Active session found for user: $userId');
 
       // Fetch ALL memberships fresh on startup and warm cache
-      final memberships = await _roleService.getAllOrganizationMembersWithRoles(
+      var memberships = await _roleService.getAllOrganizationMembersWithRoles(
         userId,
         forceRefresh: true,
       );
 
+      if (memberships.isEmpty) {
+        await Supabase.instance.client.from('organization_members').upsert({
+          'organization_id': 1,
+          'user_id': userId,
+          'role_id': 2,
+          'is_active': true,
+        }, onConflict: 'organization_id, user_id');
+        memberships = await _roleService.getAllOrganizationMembersWithRoles(
+          userId,
+          forceRefresh: true,
+        );
+      }
+
       if (!mounted) return;
 
-      if (memberships.isEmpty) {
-        // No memberships -> Join Organization
-        // ✅ DIPERBAIKI: menggunakan pushReplacement dengan context langsung
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const JoinOrganizationScreen(),
-          ),
-        );
-      } else {
-        // Pick preferred membership (Admin/Petugas if joined) and go to dashboard
+      if (memberships.isNotEmpty) {
         final memberData = _roleService.pickPreferredMembership(memberships);
         _navigateToDashboard(memberData);
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const ModernLoginScreen()),
+        );
       }
     } catch (e) {
       debugPrint('❌ Error checking organization membership: $e');

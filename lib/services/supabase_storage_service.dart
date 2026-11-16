@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -65,7 +66,14 @@ class SupabaseStorageService {
 
       await _supabase.storage
           .from('face-templates')
-          .upload(filePath, imageFile);
+          .upload(
+            filePath,
+            imageFile,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
 
       final publicUrl = _supabase.storage
           .from('face-templates')
@@ -73,6 +81,48 @@ class SupabaseStorageService {
 
       return publicUrl;
     } catch (e) {
+      throw Exception('Failed to upload face template: $e');
+    }
+  }
+
+  // Upload face template langsung dari bytes JPEG (lebih cepat, tanpa temp file)
+  Future<String> uploadFaceTemplateBytes(
+    Uint8List imageBytes,
+    int organizationMemberId,
+  ) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = '${organizationMemberId}_template_$timestamp.jpg';
+      final filePath = '$organizationMemberId/$fileName';
+
+      debugPrint(
+        'Uploading face template bytes to face-templates/$filePath (${imageBytes.length} bytes)',
+      );
+
+      await _supabase.storage
+          .from('face-templates')
+          .uploadBinary(
+            filePath,
+            imageBytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
+
+      final publicUrl = _supabase.storage
+          .from('face-templates')
+          .getPublicUrl(filePath);
+
+      debugPrint('✅ Face template uploaded to storage: $filePath');
+      return publicUrl;
+    } catch (e) {
+      debugPrint('❌ uploadFaceTemplateBytes error: $e');
       throw Exception('Failed to upload face template: $e');
     }
   }

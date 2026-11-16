@@ -10,9 +10,7 @@ import '../../attendance/services/biometric_service.dart';
 import '../../auth/services/role_service.dart';
 import '../widgets/user_bottom_nav.dart';
 import 'user_profile_page.dart';
-import '../../auth/screens/join_organization_screen.dart';
 import 'dart:async';
-import 'package:absenku/Petugas/screens/petugas_dashboard.dart';
 import '../../helpers/timezone_helper.dart';
 import '../../attendance/screens/face_attendance_multi_user_page.dart';
 import '../../helpers/language_helper.dart';
@@ -173,250 +171,6 @@ class _UserDashboardPageState extends State<UserDashboardPage>
     } catch (e) {
       debugPrint('Error loading organization info: $e');
     }
-  }
-
-  Future<void> _showOrganizationSwitcher() async {
-    final selectedMembership = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => _buildOrganizationSwitcherSheet(),
-    );
-
-    if (!mounted) return;
-    if (selectedMembership == null) return;
-
-    if (selectedMembership['id'] == widget.organizationMemberId) {
-      debugPrint('Already on this organization dashboard');
-      return;
-    }
-
-    if (_roleService.canAccessPetugasDashboard(selectedMembership)) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              PetugasDashboardPage(
-                organizationMemberId: selectedMembership['id'] as int,
-                memberData: selectedMembership,
-                userProfile: _userProfile,
-                isDarkMode: _isDarkMode,
-              ),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-        ),
-        (route) => false,
-      );
-    } else {
-      Navigator.pushAndRemoveUntil(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              UserDashboardPage(
-                organizationMemberId: selectedMembership['id'] as int,
-                memberData: selectedMembership,
-                userProfile: _userProfile,
-                isDarkMode: _isDarkMode,
-              ),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-        ),
-        (route) => false,
-      );
-    }
-  }
-
-  Widget _buildOrganizationSwitcherSheet() {
-    return Container(
-      decoration: BoxDecoration(
-        color: _isDarkMode ? const Color(0xFF162E4E) : Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(28),
-          topRight: Radius.circular(28),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                AppLanguage.tr('switch_organization'),
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: _isDarkMode ? Colors.white : const Color(0xFF1F2937),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          FutureBuilder<List<Map<String, dynamic>>>(
-            initialData: _roleService.getCachedMemberships(
-              _supabase.auth.currentUser!.id,
-            ),
-            future: _roleService.getAllOrganizationMembersWithRoles(
-              _supabase.auth.currentUser!.id,
-            ),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData &&
-                  snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final memberships = snapshot.data ?? [];
-
-              return Column(
-                children: [
-                  ...memberships.map((membership) {
-                    final organization = membership['organizations'];
-                    final roleName = _roleService.getRoleName(membership);
-                    final isActive =
-                        membership['id'] == widget.organizationMemberId;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: InkWell(
-                        onTap: () => Navigator.pop(context, membership),
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? (_isDarkMode
-                                      ? const Color(0xFF93C5FD).withOpacity(0.1)
-                                      : const Color(
-                                          0xFF1B3860,
-                                        ).withOpacity(0.05))
-                                : (_isDarkMode
-                                      ? Colors.white.withValues(alpha: 0.05)
-                                      : Colors.white),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isActive
-                                  ? (_isDarkMode
-                                        ? const Color(0xFF93C5FD)
-                                        : const Color(0xFF1B3860))
-                                  : (_isDarkMode
-                                        ? Colors.white10
-                                        : Colors.grey.shade200),
-                              width: isActive ? 2 : 1,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: isActive
-                                      ? (_isDarkMode
-                                            ? const Color(0xFF93C5FD)
-                                            : const Color(0xFF1B3860))
-                                      : (_isDarkMode
-                                            ? Colors.white10
-                                            : Colors.grey.shade100),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.business,
-                                    color: Colors.white,
-                                    size: 22,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      organization['name'] ?? 'Unknown Org',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        height: 1.1,
-                                        color: _isDarkMode
-                                            ? Colors.white
-                                            : const Color(0xFF1F2937),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      roleName.toUpperCase(),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        height: 1.0,
-                                        color: Colors.grey.shade500,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (isActive)
-                                const Icon(
-                                  Icons.check_circle,
-                                  color: Color(0xFF1B3860),
-                                  size: 24,
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                  const Divider(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const JoinOrganizationScreen(
-                              fromDashboard: true,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.add_business_rounded),
-                      label: Text(AppLanguage.tr('join_new_organization')),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1B3860),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 0,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
   }
 
   Future<void> _loadUserProfile() async {
@@ -694,6 +448,28 @@ class _UserDashboardPageState extends State<UserDashboardPage>
     });
   }
 
+  int _computeRecordMinutes(Map<String, dynamic> record, DateTime nowUtc) {
+    final stored = record['work_duration_minutes'] as int?;
+    if (stored != null && stored > 0) return stored;
+
+    final checkInStr = record['actual_check_in'] as String?;
+    if (checkInStr == null || checkInStr.isEmpty) return 0;
+
+    final checkIn = DateTime.tryParse(checkInStr)?.toUtc();
+    if (checkIn == null) return 0;
+
+    final checkOutStr = record['actual_check_out'] as String?;
+    if (checkOutStr != null && checkOutStr.isNotEmpty) {
+      final checkOut = DateTime.tryParse(checkOutStr)?.toUtc();
+      if (checkOut != null && checkOut.isAfter(checkIn)) {
+        return checkOut.difference(checkIn).inMinutes.clamp(1, 720);
+      }
+    }
+
+    final elapsed = nowUtc.difference(checkIn).inMinutes;
+    return elapsed <= 0 ? 1 : elapsed.clamp(1, 480);
+  }
+
   Future<void> _loadWeeklyOverview() async {
     if (!mounted) return;
 
@@ -702,9 +478,13 @@ class _UserDashboardPageState extends State<UserDashboardPage>
     });
 
     try {
-      final now = DateTime.now();
-      final currentWeekday = now.weekday;
-      final monday = now.subtract(Duration(days: currentWeekday - 1));
+      final nowUtc = DateTime.now().toUtc();
+      final nowOrg = TimezoneHelper.convertUtcToOrgTimezone(
+        nowUtc,
+        _organizationTimezone,
+      );
+      final currentWeekday = nowOrg.weekday;
+      final monday = nowOrg.subtract(Duration(days: currentWeekday - 1));
       final mondayStr = monday.toIso8601String().split('T')[0];
       final friday = monday.add(const Duration(days: 4));
       final fridayStr = friday.toIso8601String().split('T')[0];
@@ -715,14 +495,16 @@ class _UserDashboardPageState extends State<UserDashboardPage>
 
       final currentWeekRecords = await _supabase
           .from('attendance_records')
-          .select('attendance_date, work_duration_minutes')
+          .select(
+            'attendance_date, actual_check_in, actual_check_out, work_duration_minutes',
+          )
           .eq('organization_member_id', widget.organizationMemberId)
           .gte('attendance_date', mondayStr)
           .lte('attendance_date', fridayStr);
 
       final lastWeekRecords = await _supabase
           .from('attendance_records')
-          .select('work_duration_minutes')
+          .select('actual_check_in, actual_check_out, work_duration_minutes')
           .eq('organization_member_id', widget.organizationMemberId)
           .gte('attendance_date', lastMondayStr)
           .lte('attendance_date', lastFridayStr);
@@ -738,8 +520,11 @@ class _UserDashboardPageState extends State<UserDashboardPage>
       double totalMinutes = 0.0;
       for (final record in currentWeekRecords as List) {
         final dateStr = record['attendance_date'] as String?;
-        final minutes = record['work_duration_minutes'] as int?;
-        if (dateStr != null && minutes != null && minutes > 0) {
+        final minutes = _computeRecordMinutes(
+          Map<String, dynamic>.from(record),
+          nowUtc,
+        );
+        if (dateStr != null && minutes > 0) {
           final date = DateTime.parse(dateStr);
           final weekday = date.weekday;
           if (weekday >= 1 && weekday <= 5) {
@@ -752,8 +537,11 @@ class _UserDashboardPageState extends State<UserDashboardPage>
 
       double lastWeekMinutes = 0.0;
       for (final record in lastWeekRecords as List) {
-        final minutes = record['work_duration_minutes'] as int?;
-        if (minutes != null && minutes > 0) {
+        final minutes = _computeRecordMinutes(
+          Map<String, dynamic>.from(record),
+          nowUtc,
+        );
+        if (minutes > 0) {
           lastWeekMinutes += minutes;
         }
       }
@@ -1456,60 +1244,6 @@ class _UserDashboardPageState extends State<UserDashboardPage>
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        // Role and Organization (Ganti Akun Button)
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: _showOrganizationSwitcher,
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.18),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.35),
-                                  width: 1.2,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.swap_horiz_rounded,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                    child: Text(
-                                      '${_roleService.getRoleName(widget.memberData)}${_organization != null ? ' - ${_organization!['name']}' : ''}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Icon(
-                                    Icons.keyboard_arrow_down_rounded,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                ],
-                              ),
                             ),
                           ),
                         ),

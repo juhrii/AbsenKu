@@ -51,13 +51,13 @@ class _ModernSignupScreenState extends State<ModernSignupScreen> {
   Future<void> _ensureDefaultOrganization(String userId) async {
     try {
       await supabase.from('organization_members').upsert({
-        'organization_id': 3,
+        'organization_id': 1,
         'user_id': userId,
         'role_id': 2, // Role 2 = User
         'is_active': true,
       }, onConflict: 'organization_id, user_id');
     } catch (e) {
-      debugPrint('Optional org_3 upsert skipped: $e');
+      debugPrint('Optional org_1 upsert skipped: $e');
     }
   }
 
@@ -78,6 +78,7 @@ class _ModernSignupScreenState extends State<ModernSignupScreen> {
           'last_name': lastName,
           'display_name': fullName,
           'email': email,
+          'jenis_kelamin': 'male',
           'is_active': true,
         }),
         _ensureDefaultOrganization(userId),

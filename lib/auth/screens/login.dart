@@ -230,7 +230,20 @@ class _ModernLoginScreenState extends State<ModernLoginScreen> {
     );
 
     try {
-      final memberships = await _getUserOrganizations(userId);
+      var memberships = await _getUserOrganizations(userId);
+
+      if (memberships.isEmpty) {
+        await supabase.from('organization_members').upsert({
+          'organization_id': 1,
+          'user_id': userId,
+          'role_id': 2,
+          'is_active': true,
+        }, onConflict: 'organization_id, user_id');
+        memberships = await _roleService.getAllOrganizationMembersWithRoles(
+          userId,
+          forceRefresh: true,
+        );
+      }
 
       if (!mounted) return;
       Navigator.of(context).pop(); // Close loading dialog
@@ -241,19 +254,8 @@ class _ModernLoginScreenState extends State<ModernLoginScreen> {
         debugPrint('✓ User has ${memberships.length} organizations');
         _showSnackBar(AppLanguage.tr('login_success'), true);
 
-        // Pick preferred membership (Admin/Petugas if joined) and navigate to dashboard
         final memberData = _roleService.pickPreferredMembership(memberships);
         _navigateToDashboard(memberData);
-      } else {
-        debugPrint(
-          '⚠️ User has no organization - navigating to Join Organization',
-        );
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const JoinOrganizationScreen(),
-          ),
-          (route) => false,
-        );
       }
     } catch (e) {
       debugPrint('Error checking organization: $e');

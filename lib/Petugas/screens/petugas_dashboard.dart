@@ -7,12 +7,9 @@ import '../../attendance/services/attendance_service.dart';
 import '../../auth/services/role_service.dart';
 import '../widgets/petugas_bottom_nav.dart';
 import '../../attendance/screens/face_attendance_multi_user_page.dart';
-import '../../attendance/screens/face_registration_page.dart';
 import 'petugas_members_page.dart';
 import 'petugas_records_page.dart';
 import 'petugas_profile_page.dart';
-import '../../User/screens/user_dashboard.dart'; // ✅ Added for organization switcher
-import '../../auth/screens/join_organization_screen.dart'; // ✅ Added for Join Organization option
 import '../../helpers/language_helper.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/services.dart';
@@ -42,13 +39,12 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
   final RoleService _roleService = RoleService();
 
   bool _isLoadingActivities = true;
-  bool _hasRegisteredFace = false;
-  bool _isCheckingFace = true;
   int _currentNavIndex = 0;
   String _attendanceMode = 'face';
   String _organizationTimezone = 'Asia/Jakarta';
   Map<String, dynamic>? _organization;
   Map<String, dynamic>? _userProfile;
+  String? _assignedClassLabel;
   bool _isDarkMode = false;
 
   List<Map<String, dynamic>> _recentActivities = [];
@@ -81,6 +77,20 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
       if (tz != null && tz.isNotEmpty) {
         _organizationTimezone = tz;
       }
+    }
+
+    final initialPos = widget.memberData['positions'];
+    final initialDept = widget.memberData['departments'];
+    final posTitle = (initialPos is Map<String, dynamic>)
+        ? (initialPos['title'] as String? ?? '').trim()
+        : '';
+    final deptName = (initialDept is Map<String, dynamic>)
+        ? (initialDept['name'] as String? ?? '').trim()
+        : '';
+    if (posTitle.isNotEmpty) {
+      _assignedClassLabel = posTitle;
+    } else if (deptName.isNotEmpty) {
+      _assignedClassLabel = deptName;
     }
 
     final userId = _supabase.auth.currentUser?.id;
@@ -177,18 +187,51 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
     if (organizationId == null) return;
 
     try {
-      final org = await _supabase
-          .from('organizations')
-          .select('id, name, logo_url, timezone')
-          .eq('id', organizationId)
-          .maybeSingle();
+      final results = await Future.wait([
+        _supabase
+            .from('organizations')
+            .select('id, name, logo_url, timezone')
+            .eq('id', organizationId)
+            .maybeSingle(),
+        _supabase
+            .from('organization_members')
+            .select('''
+              positions (
+                title
+              ),
+              departments!organization_members_department_id_fkey (
+                name
+              )
+            ''')
+            .eq('id', widget.organizationMemberId)
+            .maybeSingle(),
+      ]);
 
-      if (mounted && org != null) {
+      final org = results[0];
+      final memberInfo = results[1];
+
+      String? classLabel = _assignedClassLabel;
+      if (memberInfo != null) {
+        final pos = memberInfo['positions'] as Map<String, dynamic>?;
+        final dept = memberInfo['departments'] as Map<String, dynamic>?;
+        final posTitle = (pos?['title'] as String? ?? '').trim();
+        final deptName = (dept?['name'] as String? ?? '').trim();
+        if (posTitle.isNotEmpty) {
+          classLabel = posTitle;
+        } else if (deptName.isNotEmpty) {
+          classLabel = deptName;
+        }
+      }
+
+      if (mounted) {
         setState(() {
-          _organization = org;
-          if (org['timezone'] != null) {
-            _organizationTimezone = org['timezone'] as String;
+          if (org != null) {
+            _organization = org;
+            if (org['timezone'] != null) {
+              _organizationTimezone = org['timezone'] as String;
+            }
           }
+          _assignedClassLabel = classLabel;
         });
       }
     } catch (e) {
@@ -217,43 +260,10 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
   Future<void> _refreshAll() async {
     debugPrint('=== REFRESHING ALL DATA ===');
     _loadUserProfile(); // ✅ Added to ensure profile is updated
+    _loadOrganizationInfo();
     _loadTodayStats();
     _loadRecentActivities();
     _loadWeeklyOverview();
-    _checkFaceRegistration();
-  }
-
-  Future<void> _checkFaceRegistration() async {
-    try {
-      debugPrint(
-        '🔍 Checking face registration for member ID: ${widget.organizationMemberId}',
-      );
-
-      final result = await _supabase
-          .from('biometric_data')
-          .select('id, organization_member_id, biometric_type, is_active')
-          .eq('organization_member_id', widget.organizationMemberId)
-          .eq('biometric_type', 'face_recognition')
-          .eq('is_active', true);
-
-      final List data = result as List;
-      debugPrint('📊 DB RAW RESPONSE: $data');
-
-      if (mounted) {
-        setState(() {
-          _hasRegisteredFace = data.isNotEmpty;
-          _isCheckingFace = false;
-        });
-        debugPrint('✅ Final result updated: $_hasRegisteredFace');
-      }
-    } catch (e) {
-      debugPrint('❌ Error checking face registration: $e');
-      if (mounted) {
-        setState(() {
-          _isCheckingFace = false;
-        });
-      }
-    }
   }
 
   String _composeUserName(Map<String, dynamic>? profile) {
@@ -416,6 +426,28 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
     }
   }
 
+  int _computeRecordMinutes(Map<String, dynamic> record, DateTime nowUtc) {
+    final stored = record['work_duration_minutes'] as int?;
+    if (stored != null && stored > 0) return stored;
+
+    final checkInStr = record['actual_check_in'] as String?;
+    if (checkInStr == null || checkInStr.isEmpty) return 0;
+
+    final checkIn = DateTime.tryParse(checkInStr)?.toUtc();
+    if (checkIn == null) return 0;
+
+    final checkOutStr = record['actual_check_out'] as String?;
+    if (checkOutStr != null && checkOutStr.isNotEmpty) {
+      final checkOut = DateTime.tryParse(checkOutStr)?.toUtc();
+      if (checkOut != null && checkOut.isAfter(checkIn)) {
+        return checkOut.difference(checkIn).inMinutes.clamp(1, 720);
+      }
+    }
+
+    final elapsed = nowUtc.difference(checkIn).inMinutes;
+    return elapsed <= 0 ? 1 : elapsed.clamp(1, 480);
+  }
+
   Future<void> _loadWeeklyOverview() async {
     final organizationId = widget.memberData['organization_id'] as int?;
     if (organizationId == null) {
@@ -430,12 +462,15 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
     });
 
     try {
-      // Get current week (Monday to Friday)
-      final now = DateTime.now();
-      final currentWeekday = now.weekday; // 1 = Monday, 7 = Sunday
+      final nowUtc = DateTime.now().toUtc();
+      final nowOrg = TimezoneHelper.convertUtcToOrgTimezone(
+        nowUtc,
+        _organizationTimezone,
+      );
+      final currentWeekday = nowOrg.weekday; // 1 = Monday, 7 = Sunday
 
       // Calculate Monday of current week
-      final monday = now.subtract(Duration(days: currentWeekday - 1));
+      final monday = nowOrg.subtract(Duration(days: currentWeekday - 1));
       final mondayStr = monday.toIso8601String().split('T')[0];
 
       // Calculate Friday of current week
@@ -455,6 +490,8 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
           .from('attendance_records')
           .select('''
             attendance_date,
+            actual_check_in,
+            actual_check_out,
             work_duration_minutes,
             organization_members!inner(organization_id)
           ''')
@@ -466,6 +503,8 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
       final lastWeekRecords = await _supabase
           .from('attendance_records')
           .select('''
+            actual_check_in,
+            actual_check_out,
             work_duration_minutes,
             organization_members!inner(organization_id)
           ''')
@@ -485,9 +524,12 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
       double totalMinutes = 0.0;
       for (final record in currentWeekRecords as List) {
         final dateStr = record['attendance_date'] as String?;
-        final minutes = record['work_duration_minutes'] as int?;
+        final minutes = _computeRecordMinutes(
+          Map<String, dynamic>.from(record),
+          nowUtc,
+        );
 
-        if (dateStr != null && minutes != null && minutes > 0) {
+        if (dateStr != null && minutes > 0) {
           final date = DateTime.parse(dateStr);
           final weekday = date.weekday;
 
@@ -502,8 +544,11 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
       // Calculate last week's total
       double lastWeekMinutes = 0.0;
       for (final record in lastWeekRecords as List) {
-        final minutes = record['work_duration_minutes'] as int?;
-        if (minutes != null && minutes > 0) {
+        final minutes = _computeRecordMinutes(
+          Map<String, dynamic>.from(record),
+          nowUtc,
+        );
+        if (minutes > 0) {
           lastWeekMinutes += minutes;
         }
       }
@@ -588,245 +633,6 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
   void _handleSelfAttendance() {
     // AbsenKu mengunci mode presensi ke Face ID (Multi-User / Kiosk).
     _handleCameraButtonPress();
-  }
-
-  Future<void> _showOrganizationSwitcher() async {
-    final selectedMembership = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => _buildOrganizationSwitcherSheet(),
-    );
-
-    if (!mounted) return;
-    if (selectedMembership == null) return;
-
-    // Skip jika sudah di organisasi yang sama
-    if (selectedMembership['id'] == widget.organizationMemberId) return;
-
-    // Navigasi berdasarkan role — dilakukan di context dashboard (valid)
-    if (_roleService.canAccessPetugasDashboard(selectedMembership)) {
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              PetugasDashboardPage(
-                organizationMemberId: selectedMembership['id'] as int,
-                memberData: selectedMembership,
-                userProfile: _userProfile,
-                isDarkMode: _isDarkMode,
-              ),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-        ),
-      );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => UserDashboardPage(
-            organizationMemberId: selectedMembership['id'] as int,
-            memberData: selectedMembership,
-            isDarkMode: _isDarkMode,
-          ),
-        ),
-      );
-    }
-  }
-
-  Widget _buildOrganizationSwitcherSheet() {
-    return Container(
-      decoration: BoxDecoration(
-        color: _isDarkMode ? const Color(0xFF0B132B) : Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(28),
-          topRight: Radius.circular(28),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: _isDarkMode ? Colors.white24 : Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                AppLanguage.tr('switch_organization'),
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: _isDarkMode ? Colors.white : const Color(0xFF1F2937),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          FutureBuilder<List<Map<String, dynamic>>>(
-            initialData: _roleService.getCachedMemberships(
-              _supabase.auth.currentUser!.id,
-            ),
-            future: _roleService.getAllOrganizationMembersWithRoles(
-              _supabase.auth.currentUser!.id,
-            ),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData &&
-                  snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
-
-              final memberships = snapshot.data ?? [];
-
-              return Column(
-                children: [
-                  ...memberships.map((membership) {
-                    final organization = membership['organizations'];
-                    final roleName = _roleService.getRoleName(membership);
-                    final isActive =
-                        membership['id'] == widget.organizationMemberId;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: InkWell(
-                        // Kembalikan membership ke .then() di _showOrganizationSwitcher
-                        onTap: () => Navigator.pop(context, membership),
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? const Color(
-                                    0xFF1B3860,
-                                  ).withOpacity(_isDarkMode ? 0.3 : 0.05)
-                                : (_isDarkMode
-                                      ? const Color(0xFF162E4E)
-                                      : Colors.white),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isActive
-                                  ? const Color(0xFF2563EB)
-                                  : (_isDarkMode
-                                        ? Colors.white12
-                                        : Colors.grey.shade200),
-                              width: isActive ? 2 : 1,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: isActive
-                                      ? const Color(0xFF1B3860)
-                                      : (_isDarkMode
-                                            ? Colors.white10
-                                            : Colors.grey.shade100),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.business,
-                                    color: Colors.white,
-                                    size: 22,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      organization?['name'] ??
-                                          AppLanguage.tr('unknown_org'),
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        height: 1.1,
-                                        color: _isDarkMode
-                                            ? Colors.white
-                                            : const Color(0xFF1F2937),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      roleName.toUpperCase(),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        height: 1.0,
-                                        color: _isDarkMode
-                                            ? Colors.white60
-                                            : Colors.grey.shade500,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (isActive)
-                                const Icon(
-                                  Icons.check_circle,
-                                  color: Color(0xFF2563EB),
-                                  size: 24,
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                  const Divider(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context); // Close switcher
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const JoinOrganizationScreen(
-                              fromDashboard: true,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.add_business_rounded),
-                      label: Text(AppLanguage.tr('join_new_organization')),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1B3860),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 0,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
   }
 
   void _navigateToProfile() {
@@ -1212,65 +1018,6 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        // Role and Organization (Ganti Akun Button)
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () {
-                              debugPrint(
-                                '🏢 HEADER Organization Switcher tapped!',
-                              );
-                              _showOrganizationSwitcher();
-                            },
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.18),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.35),
-                                  width: 1.2,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.swap_horiz_rounded,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                    child: Text(
-                                      '${_roleService.getRoleName(widget.memberData)}${_organization != null ? ' - ${_organization!['name']}' : ''}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Icon(
-                                    Icons.keyboard_arrow_down_rounded,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
                         const SizedBox(height: 8),
                         // Date
                         Container(
@@ -1326,13 +1073,7 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
                       offset: const Offset(0, -16),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          children: [
-                            _buildTimeCard(currentTime, nowOrg),
-                            const SizedBox(height: 16),
-                            _buildFaceRegistrationCard(),
-                          ],
-                        ),
+                        child: _buildTimeCard(currentTime, nowOrg),
                       ),
                     ),
 
@@ -1687,7 +1428,7 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
 
   Widget _buildTimeCard(String currentTime, DateTime nowOrg) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       decoration: BoxDecoration(
         color: _isDarkMode ? const Color(0xFF162E4E) : Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -1699,260 +1440,83 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
           ),
         ],
       ),
-      child: Column(
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          // Time and Location Row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+              // Row 1: Labels (sejajar persis)
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
                       AppLanguage.tr('current_time'),
                       style: TextStyle(
                         fontSize: 12,
-                        color: _isDarkMode
-                            ? Colors.white70
-                            : Colors.grey.shade600,
+                        color:
+                            _isDarkMode ? Colors.white70 : Colors.grey.shade600,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$currentTime ${nowOrg.hour < 12 ? AppLanguage.tr('am') : AppLanguage.tr('pm')}',
+                  ),
+                  const SizedBox(width: 29),
+                  Expanded(
+                    child: Text(
+                      'Kelas:',
                       style: TextStyle(
-                        fontSize: 28,
+                        fontSize: 12,
+                        color:
+                            _isDarkMode ? Colors.white70 : Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              // Row 2: Values (sejajar di garis dasar / baseline teks)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Expanded(
+                    child: Text(
+                      '$currentTime ${nowOrg.hour < 12 ? AppLanguage.tr('am') : AppLanguage.tr('pm')}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 25,
                         fontWeight: FontWeight.bold,
                         color: _isDarkMode
                             ? Colors.white
                             : const Color(0xFF1B3860),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 45,
-                margin: const EdgeInsets.only(top: 10),
-                color: _isDarkMode ? Colors.white24 : Colors.grey.shade200,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              AppLanguage.tr(
-                                'Petugas.dashboard.office_location',
-                              ),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _isDarkMode
-                                    ? Colors.white70
-                                    : Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              color: _isDarkMode
-                                  ? const Color(0xFF93C5FD)
-                                  : const Color(0xFF1B3860),
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                _organization?['name'] ??
-                                    AppLanguage.tr('office'),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: _isDarkMode
-                                      ? const Color(0xFF93C5FD)
-                                      : Colors.black87,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                  ),
+                  const SizedBox(width: 29),
+                  Expanded(
+                    child: Text(
+                      _assignedClassLabel ?? 'XII RPL 1',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: _isDarkMode
+                            ? Colors.white
+                            : const Color(0xFF1B3860),
+                      ),
                     ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Check In Button
-          SizedBox(
-            width: double.infinity,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF2563EB), Color(0xFF1B3860)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF1B3860).withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _handleCameraButtonPress,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Text(
-                      AppLanguage.tr('Petugas.dashboard.selfie_gps'),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFaceRegistrationCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _isDarkMode ? const Color(0xFF162E4E) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 15,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB).withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.face_unlock_rounded,
-                  color: Color(0xFF2563EB),
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Pengenalan Wajah',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _hasRegisteredFace
-                          ? 'Semua sudah baik'
-                          : 'Daftarkan wajah Anda untuk menggunakan fitur absensi',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: _hasRegisteredFace
-                            ? Colors.green
-                            : Colors.grey.shade500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: _hasRegisteredFace
-                      ? Colors.green.withOpacity(0.1)
-                      : const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  _hasRegisteredFace ? 'Aktif' : 'Belum ada',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: _hasRegisteredFace
-                        ? Colors.green
-                        : const Color(0xFFB45309),
-                  ),
-                ),
-              ),
             ],
           ),
-          if (!_hasRegisteredFace) ...[
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => FaceRegistrationPage(
-                      organizationMemberId: widget.organizationMemberId,
-                    ),
-                  ),
-                ).then((_) => _checkFaceRegistration()),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'DAFTARKAN',
-                  style: TextStyle(
-                    color: Color(0xFF2563EB),
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
-            ),
-          ],
+          // Vertical divider centered between the two columns
+          Container(
+            width: 1,
+            height: 46,
+            color: _isDarkMode ? Colors.white24 : Colors.grey.shade200,
+          ),
         ],
       ),
     );

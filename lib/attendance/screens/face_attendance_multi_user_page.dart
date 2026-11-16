@@ -1516,24 +1516,7 @@ class _FaceAttendanceMultiUserPageState
   }
 
   Future<void> _loadMemberSchedule(int memberId) async {
-    try {
-      final today = DateTime.now().toIso8601String().split('T')[0];
-      final schedule = await _supabase
-          .from('member_schedules')
-          .select('id, work_schedule_id, shift_id, effective_date, end_date')
-          .eq('organization_member_id', memberId)
-          .eq('is_active', true)
-          .lte('effective_date', today)
-          .or('end_date.is.null,end_date.gte.$today')
-          .order('effective_date', ascending: false)
-          .limit(1)
-          .maybeSingle();
-
-      if (schedule != null && mounted)
-        setState(() => _memberSchedule = schedule);
-    } catch (e) {
-      debugPrint('🌐 Offline member schedule: $e');
-    }
+    // Organization default schedule is used directly via _loadDailySchedule
   }
 
   Future<void> _loadDailySchedule(int memberId) async {

@@ -1677,8 +1677,14 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
   Widget _buildMemberCard(Map<String, dynamic> member) {
     final department = member['departments'] as Map<String, dynamic>?;
     final position = member['positions'] as Map<String, dynamic>?;
+    final systemRole = member['system_roles'] as Map<String, dynamic>?;
+    final sysRoleName = systemRole?['name'] as String?;
 
-    String roleName = AppLanguage.tr('Petugas.members.member');
+    String roleName = (sysRoleName != null &&
+            sysRoleName.isNotEmpty &&
+            sysRoleName.toLowerCase() != 'user')
+        ? sysRoleName
+        : AppLanguage.tr('Petugas.members.member');
     final deptName = department?['name'] as String?;
     final posTitle = (position?['title'] ?? position?['name']) as String?;
     if (posTitle != null && posTitle.isNotEmpty) {

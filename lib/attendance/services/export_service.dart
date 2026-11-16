@@ -50,8 +50,7 @@ class ExportService {
                 display_name,
                 first_name,
                 last_name,
-                department_id,
-                phone_number
+                phone
               )
             )
           ''')

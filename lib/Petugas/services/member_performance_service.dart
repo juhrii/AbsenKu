@@ -109,9 +109,13 @@ class MemberPerformanceService {
             is_active,
             user_profiles!inner(
               id,
+              email,
               display_name,
               first_name,
               last_name,
+              phone,
+              jenis_kelamin,
+              date_of_birth,
               profile_photo_url
             ),
             departments!organization_members_department_id_fkey${departmentFilter != null && departmentFilter.toLowerCase() != 'all' ? '!inner' : ''}(
@@ -131,11 +135,6 @@ class MemberPerformanceService {
               id,
               is_active,
               biometric_type
-            ),
-            rfid_cards(
-              id,
-              is_active,
-              card_number
             )
           ''';
 

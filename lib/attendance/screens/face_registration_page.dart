@@ -628,19 +628,23 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
         'enrollmentDate': DateTime.now().toIso8601String(),
       };
 
-      if (_frontFrameBytes != null) {
-        final bytes = _frontFrameBytes!;
-        final w = _frontFrameWidth;
-        final h = _frontFrameHeight;
-        final rot = _frontFrameRotation;
-        _frontFrameBytes = null;
-        unawaited(_uploadFrontBytesInBackground(bytes, w, h, rot));
-      }
+      final uploadFuture = (_frontFrameBytes != null)
+          ? _uploadFrontBytesToStorage(
+              _frontFrameBytes!,
+              _frontFrameWidth,
+              _frontFrameHeight,
+              _frontFrameRotation,
+            )
+          : Future<void>.value();
+      _frontFrameBytes = null;
 
-      await _biometricService.registerFaceTemplate(
-        organizationMemberId: widget.organizationMemberId,
-        faceTemplate: multiTemplate,
-      );
+      await Future.wait([
+        _biometricService.registerFaceTemplate(
+          organizationMemberId: widget.organizationMemberId,
+          faceTemplate: multiTemplate,
+        ),
+        uploadFuture,
+      ]);
 
       if (!mounted) return;
       _showSuccessDialog();
@@ -717,7 +721,7 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
     });
   }
 
-  Future<void> _uploadFrontBytesInBackground(
+  Future<void> _uploadFrontBytesToStorage(
     Uint8List frameBytes,
     int width,
     int height,
@@ -730,21 +734,12 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
         'height': height,
         'rotation': rotation,
       });
-      final tempDir = await Directory.systemTemp.createTemp();
-      final tempFile = File('${tempDir.path}/face_front.jpg');
-      await tempFile.writeAsBytes(jpgBytes);
-      await _storageService.uploadFaceTemplate(
-        tempFile,
+      await _storageService.uploadFaceTemplateBytes(
+        jpgBytes,
         widget.organizationMemberId,
       );
-      if (await tempFile.exists()) {
-        await tempFile.delete();
-      }
-      if (await tempDir.exists()) {
-        await tempDir.delete();
-      }
     } catch (e) {
-      debugPrint('Background template upload skipped: $e');
+      debugPrint('⚠️ Face template storage upload failed: $e');
     }
   }
 
@@ -1628,7 +1623,9 @@ Uint8List _encodeNv21FrameToJpgCompute(Map<String, dynamic> params) {
     rgbImage = img.Image.fromBytes(
       width: width,
       height: height,
-      bytes: bytes.buffer,
+      bytes: bytes.offsetInBytes == 0
+          ? bytes.buffer
+          : Uint8List.fromList(bytes).buffer,
       order: img.ChannelOrder.bgra,
     );
   } else {
@@ -1637,7 +1634,8 @@ Uint8List _encodeNv21FrameToJpgCompute(Map<String, dynamic> params) {
       final int yRow = y * width;
       final int uvRow = ySize + (y >> 1) * width;
       for (int x = 0; x < width; x++) {
-        final int yVal = bytes[yRow + x];
+        final int yIdx = yRow + x;
+        final int yVal = yIdx < bytes.length ? bytes[yIdx] : 0;
         final int uvIdx = uvRow + (x & ~1);
         final int vVal = uvIdx < bytes.length ? bytes[uvIdx] : 128;
         final int uVal = uvIdx + 1 < bytes.length ? bytes[uvIdx + 1] : 128;

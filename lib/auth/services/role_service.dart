@@ -212,8 +212,20 @@ class RoleService {
             organization_id,
             user_id,
             employee_id,
+            department_id,
+            position_id,
             is_active,
             role_id,
+            departments!organization_members_department_id_fkey (
+              id,
+              code,
+              name
+            ),
+            positions (
+              id,
+              code,
+              title
+            ),
             organizations!organization_members_organization_id_fkey (
               id,
               name,

@@ -142,10 +142,18 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
 
       debugPrint('🔍 Validating Inv Code: "$invCode"');
 
+      final isRoleAliasCode = const {
+        'ORG001',
+        'ORG002',
+        'ORG003',
+        'ORG004',
+        'ABSENKU',
+      }.contains(invCode);
+
       final orgResponse = await Supabase.instance.client
           .from('organizations')
           .select('id, name, inv_code')
-          .eq('inv_code', invCode)
+          .eq('inv_code', isRoleAliasCode ? 'ORG001' : invCode)
           .eq('is_active', true)
           .maybeSingle();
 
