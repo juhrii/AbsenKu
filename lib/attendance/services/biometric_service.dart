@@ -94,22 +94,13 @@ class BiometricService {
       }
       */
 
-      // Deactivate old templates (both 'face' and 'face_recognition')
-      final existingTemplates = await _supabase
+      // Deactivate old templates in a single query (both 'face' and 'face_recognition')
+      await _supabase
           .from('biometric_data')
-          .select('id')
+          .update({'is_active': false})
           .eq('organization_member_id', organizationMemberId)
-          .filter('biometric_type', 'in', ['face', 'face_recognition'])
+          .inFilter('biometric_type', ['face', 'face_recognition'])
           .eq('is_active', true);
-
-      if (existingTemplates != null && (existingTemplates as List).isNotEmpty) {
-        for (var t in existingTemplates) {
-          await _supabase
-              .from('biometric_data')
-              .update({'is_active': false})
-              .eq('id', t['id']);
-        }
-      }
 
       // Insert new template (NO template_version column)
       final biometricData = {

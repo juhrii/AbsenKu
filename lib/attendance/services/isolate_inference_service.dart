@@ -264,7 +264,49 @@ Future<void> _isolateEntryPoint(_IsolateInitData initData) async {
             throw Exception('Image file not found: ${message.imagePath}');
           }
           final imageBytes = await imageFile.readAsBytes();
-          faceImage = img.decodeImage(imageBytes);
+          final decoded = img.decodeImage(imageBytes);
+          if (decoded != null) {
+            final box = message.faceData['boundingBox'] as Map<String, dynamic>?;
+            if (box != null) {
+              final double bLeft = (box['left'] as num).toDouble();
+              final double bTop = (box['top'] as num).toDouble();
+              final double bWidth = (box['width'] as num).toDouble();
+              final double bHeight = (box['height'] as num).toDouble();
+              const double margin = 0.25;
+              final int startX = max(0, (bLeft - bWidth * margin).toInt());
+              final int startY = max(0, (bTop - bHeight * margin).toInt());
+              final int endX = min(
+                decoded.width,
+                (bLeft + bWidth * (1 + margin)).toInt(),
+              );
+              final int endY = min(
+                decoded.height,
+                (bTop + bHeight * (1 + margin)).toInt(),
+              );
+              final int cropW = endX - startX;
+              final int cropH = endY - startY;
+              final img.Image cropped = (cropW > 10 && cropH > 10)
+                  ? img.copyCrop(
+                      decoded,
+                      x: startX,
+                      y: startY,
+                      width: cropW,
+                      height: cropH,
+                    )
+                  : decoded;
+              faceImage = img.copyResize(
+                cropped,
+                width: recognitionInputSize,
+                height: recognitionInputSize,
+              );
+            } else {
+              faceImage = img.copyResize(
+                decoded,
+                width: recognitionInputSize,
+                height: recognitionInputSize,
+              );
+            }
+          }
         } else if (message.imageBytes != null &&
             message.imageWidth != null &&
             message.imageHeight != null) {

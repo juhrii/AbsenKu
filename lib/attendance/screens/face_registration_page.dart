@@ -5,7 +5,6 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:image/image.dart' as img;
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import '../services/face_recognition_tflite_service.dart';
@@ -50,6 +49,10 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
   int _consecutiveValidFrames = 0;
   final int _requiredValidFrames = 3;
   bool _isRegistrationComplete = false;
+  Uint8List? _lastStreamBytes;
+  int _lastStreamWidth = 0;
+  int _lastStreamHeight = 0;
+  int _lastStreamRotation = 0;
 
   // Multi-Angle Registration Logic
   CaptureAngle _currentAngle = CaptureAngle.front;
@@ -221,10 +224,10 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
 
       _cameraController = CameraController(
         frontCamera,
-        ResolutionPreset.high,
+        ResolutionPreset.medium,
         enableAudio: false,
         imageFormatGroup: Platform.isAndroid
-            ? ImageFormatGroup.yuv420
+            ? ImageFormatGroup.nv21
             : ImageFormatGroup.bgra8888,
       );
 
@@ -349,22 +352,32 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
           );
 
           if (_consecutiveValidFrames >= _requiredValidFrames &&
-              !_isTakingPicture) {
+              !_isTakingPicture &&
+              _lastStreamBytes != null) {
             _isTakingPicture = true;
-            await _stopStream();
+            _consecutiveValidFrames = 0;
+
+            final frameBytes = Uint8List.fromList(_lastStreamBytes!);
+            final frameWidth = _lastStreamWidth;
+            final frameHeight = _lastStreamHeight;
+            final frameRotation = _lastStreamRotation;
 
             setState(() {
               _guidanceMessage = AppLanguage.tr(
                 'attendance.face.capturing_photo',
               );
-              _currentStep = 'Capturing...';
+              _currentStep = 'Memproses...';
               _painterFaces = [];
             });
 
             if (!mounted) return;
-            final XFile file = await _cameraController!.takePicture();
-            if (!mounted) return;
-            await _processCapturedAngle(file.path);
+            await _processCapturedStreamAngle(
+              frameBytes,
+              frameWidth,
+              frameHeight,
+              frameRotation,
+              face,
+            );
           }
         } else {
           _consecutiveValidFrames = 0;
@@ -475,7 +488,13 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
     };
   }
 
-  Future<void> _processCapturedAngle(String imagePath) async {
+  Future<void> _processCapturedStreamAngle(
+    Uint8List frameBytes,
+    int width,
+    int height,
+    int rotation,
+    Face face,
+  ) async {
     try {
       const successMsg = 'Oke';
 
@@ -487,8 +506,12 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
 
       VoiceHelper.speak(successMsg, force: true);
 
-      final faceTemplate = await _faceService.extractFaceFeatures(
-        imagePath,
+      final faceTemplate = await _faceService.buildTemplateFromBytes(
+        frameBytes,
+        width,
+        height,
+        rotation,
+        face,
         allowSidePose: _currentAngle != CaptureAngle.front,
       );
 
@@ -496,7 +519,7 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
 
       double qualityScore =
           (faceTemplate['qualityScore'] as num?)?.toDouble() ?? 0.0;
-      double minQuality = _currentAngle == CaptureAngle.front ? 0.90 : 0.65;
+      double minQuality = _currentAngle == CaptureAngle.front ? 0.72 : 0.58;
 
       if (qualityScore < minQuality) {
         setState(() {
@@ -512,34 +535,32 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
           force: true,
         );
 
-        await Future.delayed(const Duration(seconds: 2));
-        await File(imagePath).delete();
+        await Future.delayed(const Duration(milliseconds: 900));
         _isTakingPicture = false;
-        _startImageStream();
         return;
       }
 
       _capturedTemplates[_currentAngle] = faceTemplate;
 
       if (_currentAngle == CaptureAngle.front) {
-        _frontImagePath = imagePath;
-      } else {
-        await File(imagePath).delete();
-      }
-
-      if (_currentAngle == CaptureAngle.front) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (!mounted) return;
         _currentAngle = CaptureAngle.left;
         _resetStreamForAngle(
           '${AppLanguage.tr('attendance.face.step')} 2 ${AppLanguage.tr('common.of')} 3',
           AppLanguage.tr('attendance.face.turn_left'),
         );
       } else if (_currentAngle == CaptureAngle.left) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (!mounted) return;
         _currentAngle = CaptureAngle.right;
         _resetStreamForAngle(
           '${AppLanguage.tr('attendance.face.step')} 3 ${AppLanguage.tr('common.of')} 3',
           AppLanguage.tr('attendance.face.turn_right'),
         );
       } else {
+        await _stopStream();
+        if (!mounted) return;
         setState(() {
           _guidanceMessage =
               '${AppLanguage.tr('attendance.face.done')} ${AppLanguage.tr('attendance.face.saving_data')}';
@@ -600,20 +621,9 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
       };
 
       if (_frontImagePath != null) {
-        final imageFile = File(_frontImagePath!);
-        final processedFile = await _processImage(imageFile);
-        if (!mounted) return;
-        await _storageService.uploadFaceTemplate(
-          processedFile,
-          widget.organizationMemberId,
-        );
-
-        if (!mounted) return;
-        if (await imageFile.exists()) await imageFile.delete();
-        if (processedFile.path != imageFile.path) {
-          final pf = File(processedFile.path);
-          if (await pf.exists()) await pf.delete();
-        }
+        final frontPath = _frontImagePath!;
+        _frontImagePath = null;
+        unawaited(_uploadFrontTemplateInBackground(frontPath));
       }
 
       await _biometricService.registerFaceTemplate(
@@ -622,12 +632,10 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
       );
 
       if (!mounted) return;
-      if (mounted) {
-        _showSuccessDialog();
-        VoiceHelper.speak(
-          AppLanguage.tr('attendance.face.registration_success'),
-        );
-      }
+      _showSuccessDialog();
+      VoiceHelper.speak(
+        AppLanguage.tr('attendance.face.registration_success'),
+      );
     } catch (e) {
       _showError('Gagal registrasi: $e');
       setState(() {
@@ -690,7 +698,7 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
       ),
     );
 
-    Future.delayed(const Duration(milliseconds: 2500), () {
+    Future.delayed(const Duration(milliseconds: 1100), () {
       if (mounted) {
         Navigator.of(context).pop();
         Navigator.of(context).pop(true);
@@ -698,29 +706,19 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
     });
   }
 
-  Future<File> _processImage(File imageFile) async {
+  Future<void> _uploadFrontTemplateInBackground(String frontPath) async {
     try {
-      final imageBytes = await imageFile.readAsBytes();
-      final image = img.decodeImage(imageBytes);
-
-      if (image == null) return imageFile;
-
-      var enhanced = img.adjustColor(image, brightness: 1.1, contrast: 1.15);
-      final flipped = img.flipHorizontal(enhanced);
-      final resized = img.copyResize(
-        flipped,
-        width: 800,
-        interpolation: img.Interpolation.average,
+      final imageFile = File(frontPath);
+      if (!await imageFile.exists()) return;
+      await _storageService.uploadFaceTemplate(
+        imageFile,
+        widget.organizationMemberId,
       );
-
-      final compressedBytes = img.encodeJpg(resized, quality: 90);
-      final tempDir = await Directory.systemTemp.createTemp();
-      final processedFile = File('${tempDir.path}/processed_face.jpg');
-      await processedFile.writeAsBytes(compressedBytes);
-
-      return processedFile;
+      if (await imageFile.exists()) {
+        await imageFile.delete();
+      }
     } catch (e) {
-      return imageFile;
+      debugPrint('Background template upload skipped: $e');
     }
   }
 
@@ -755,7 +753,9 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
     final Uint8List bytes;
     int bytesPerRow;
 
-    if (Platform.isAndroid && image.format.group == ImageFormatGroup.yuv420) {
+    if (Platform.isAndroid &&
+        image.format.group == ImageFormatGroup.yuv420 &&
+        image.planes.length >= 3) {
       try {
         final planesData = image.planes
             .map(
@@ -767,8 +767,7 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
             )
             .toList();
 
-        bytes = await compute(
-          _yuv420ToNv21Compute,
+        bytes = _yuv420ToNv21Compute(
           _NV21ConvertParams(
             width: image.width,
             height: image.height,
@@ -782,6 +781,9 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
         debugPrint('Error in NV21 conversion: $e');
         return null;
       }
+    } else if (image.planes.length == 1) {
+      bytes = image.planes.first.bytes;
+      bytesPerRow = image.planes.first.bytesPerRow;
     } else {
       final WriteBuffer allBytes = WriteBuffer();
       for (final Plane plane in image.planes) {
@@ -790,6 +792,11 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
       bytes = allBytes.done().buffer.asUint8List();
       bytesPerRow = image.planes.first.bytesPerRow;
     }
+
+    _lastStreamBytes = bytes;
+    _lastStreamWidth = image.width;
+    _lastStreamHeight = image.height;
+    _lastStreamRotation = rotation.rawValue;
 
     return InputImage.fromBytes(
       bytes: bytes,

@@ -2330,9 +2330,10 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
         final storageService = SupabaseStorageService();
 
         final processedFile = File(image.path);
-        await storageService.uploadFaceTemplate(
-          processedFile,
-          organizationMemberId,
+        unawaited(
+          storageService
+              .uploadFaceTemplate(processedFile, organizationMemberId)
+              .catchError((_) => ''),
         );
 
         await biometricService.registerFaceTemplate(

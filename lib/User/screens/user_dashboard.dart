@@ -75,6 +75,16 @@ class _UserDashboardPageState extends State<UserDashboardPage>
     super.initState();
     _isDarkMode = widget.isDarkMode;
     _userProfile = widget.userProfile;
+
+    final initialOrg = widget.memberData['organizations'];
+    if (initialOrg is Map<String, dynamic>) {
+      _organization = initialOrg;
+      final tz = initialOrg['timezone'] as String?;
+      if (tz != null && tz.isNotEmpty) {
+        _organizationTimezone = tz;
+      }
+    }
+
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
@@ -86,7 +96,6 @@ class _UserDashboardPageState extends State<UserDashboardPage>
     _loadWeeklyOverview();
     _loadAttendanceData(_focusedDay);
     _loadRecentActivities();
-    _loadOrganizationTimezone();
     _loadUserTimezone();
     _loadOrganizationInfo();
     _initRealTimeClock();
@@ -148,39 +157,20 @@ class _UserDashboardPageState extends State<UserDashboardPage>
     try {
       final org = await _supabase
           .from('organizations')
-          .select('id, name, logo_url')
+          .select('id, name, logo_url, timezone')
           .eq('id', organizationId)
           .maybeSingle();
 
-      if (org != null) {
+      if (mounted && org != null) {
         setState(() {
           _organization = org;
+          if (org['timezone'] != null) {
+            _organizationTimezone = org['timezone'] as String;
+          }
         });
       }
     } catch (e) {
       debugPrint('Error loading organization info: $e');
-    }
-  }
-
-  Future<void> _loadOrganizationTimezone() async {
-    final organizationId = widget.memberData['organization_id'] as int?;
-    if (organizationId == null) return;
-
-    try {
-      final org = await _supabase
-          .from('organizations')
-          .select('timezone')
-          .eq('id', organizationId)
-          .maybeSingle();
-
-      if (org != null && org['timezone'] != null) {
-        setState(() {
-          _organizationTimezone = org['timezone'] as String;
-        });
-        debugPrint('Organization timezone: $_organizationTimezone');
-      }
-    } catch (e) {
-      debugPrint('Error loading organization timezone: $e');
     }
   }
 
@@ -209,6 +199,7 @@ class _UserDashboardPageState extends State<UserDashboardPage>
               PetugasDashboardPage(
                 organizationMemberId: selectedMembership['id'] as int,
                 memberData: selectedMembership,
+                userProfile: _userProfile,
                 isDarkMode: _isDarkMode,
               ),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -225,6 +216,7 @@ class _UserDashboardPageState extends State<UserDashboardPage>
               UserDashboardPage(
                 organizationMemberId: selectedMembership['id'] as int,
                 memberData: selectedMembership,
+                userProfile: _userProfile,
                 isDarkMode: _isDarkMode,
               ),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -273,11 +265,15 @@ class _UserDashboardPageState extends State<UserDashboardPage>
           ),
           const SizedBox(height: 16),
           FutureBuilder<List<Map<String, dynamic>>>(
+            initialData: _roleService.getCachedMemberships(
+              _supabase.auth.currentUser!.id,
+            ),
             future: _roleService.getAllOrganizationMembersWithRoles(
               _supabase.auth.currentUser!.id,
             ),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (!snapshot.hasData &&
+                  snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
 

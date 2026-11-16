@@ -477,7 +477,7 @@ class FaceRecognitionTFLiteService {
 
   void dispose() {
     _faceDetector.close();
-    _inferenceService.dispose();
-    _isInitialized = false;
+    // Keep shared singleton IsolateInferenceService alive so TFLite model
+    // stays warm in memory across registration and attendance screens.
   }
 }

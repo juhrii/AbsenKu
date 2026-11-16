@@ -199,6 +199,7 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
         organizationMemberId = newMember['id'] as int;
       }
 
+      RoleService.clearCache(user.id);
       final memberData = await _roleService.getOrganizationMemberWithRole(
         user.id,
       );
@@ -308,6 +309,7 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
   }
 
   Future<void> _handleLogout() async {
+    RoleService.clearCache();
     await Supabase.instance.client.auth.signOut();
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(

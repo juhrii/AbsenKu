@@ -123,6 +123,10 @@ class _ModernSignupScreenState extends State<ModernSignupScreen> {
       if (errorString.contains('weak password')) {
         return AppLanguage.tr('weak_password');
       }
+      if (errorString.contains('over_email_send_rate_limit') ||
+          errorString.contains('email rate limit exceeded')) {
+        return 'Batas pengiriman email konfirmasi Supabase tercapai. Matikan "Confirm email" di Supabase Dashboard > Authentication > Providers > Email.';
+      }
       if (errorString.contains('network') ||
           errorString.contains('connection') ||
           errorString.contains('socketexception') ||

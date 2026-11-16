@@ -491,6 +491,7 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
 
     if (confirm == true) {
       try {
+        RoleService.clearCache();
         await _supabase.auth.signOut();
 
         if (mounted) {
