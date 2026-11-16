@@ -290,6 +290,7 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
                 const SizedBox(height: 24),
                 Text(
                   _tr('join_org_success_title'),
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,

@@ -6,7 +6,6 @@ import 'package:absenku/User/screens/user_dashboard.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:google_sign_in/google_sign_in.dart' as gsi;
 import 'signup.dart';
 import '../../helpers/language_helper.dart';
 import '../services/role_service.dart';
@@ -350,120 +349,6 @@ class _ModernLoginScreenState extends State<ModernLoginScreen> {
     }
   }
 
-  Future<void> _signInWithGoogle() async {
-    if (_isLoading) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      // CEK KONEKSI INTERNET DULU
-      final hasConnection = await _checkInternetConnection();
-      if (!hasConnection) {
-        throw SocketException('Tidak ada koneksi internet');
-      }
-
-      debugPrint('🔵 Starting Google Sign In...');
-
-      const webClientId =
-          '210380129521-9kb8of23fk2jrf6p09do71v4df4asehf.apps.googleusercontent.com';
-      const androidClientIds = [
-        '210380129521-tt2solatsiu1ieo6547kmgu6pfl19t7a.apps.googleusercontent.com',
-        '210380129521-lr442btemji6k32tnh4a29llllapc8q9.apps.googleusercontent.com',
-      ];
-
-      String activeAndroidClientId = androidClientIds.first;
-
-      gsi.GoogleSignInAccount? googleUser;
-      gsi.GoogleSignInAuthentication? googleAuth;
-
-      bool success = false;
-
-      for (final clientId in androidClientIds) {
-        try {
-          debugPrint('🧩 Trying Google Sign In with clientId: $clientId');
-
-          final signInManager = gsi.GoogleSignIn.instance;
-          await signInManager.initialize(
-            serverClientId: webClientId,
-            clientId: clientId,
-          );
-
-          await signInManager.signOut();
-
-          // In 7.2.0, authenticate() is used instead of signIn()
-          googleUser = await signInManager.authenticate();
-
-          googleAuth = googleUser.authentication;
-          if (googleAuth.idToken != null) {
-            activeAndroidClientId = clientId;
-            success = true;
-            debugPrint('✅ Sign-in successful with clientId: $clientId');
-            break;
-          }
-        } catch (e) {
-          debugPrint('❌ Failed with clientId $clientId: $e');
-          continue;
-        }
-      }
-
-      if (!success || googleAuth == null || googleAuth.idToken == null) {
-        throw Exception('Semua Client ID gagal. Cek konfigurasi Google Cloud.');
-      }
-
-      debugPrint('🔵 Authenticating with Supabase...');
-
-      // Supabase signInWithIdToken prioritize idToken.
-      final response = await supabase.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: googleAuth.idToken!,
-      );
-
-      final user = response.user;
-      if (user == null) {
-        throw Exception('Supabase authentication gagal: user null');
-      }
-
-      debugPrint('✅ Supabase auth success for ${user.email}');
-      debugPrint('   Using Android Client: $activeAndroidClientId');
-
-      await _ensureUserProfile(
-        user.id,
-        user.email!,
-        googleName: googleUser?.displayName ?? user.userMetadata?['full_name'],
-      );
-
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_email', user.email!);
-      await prefs.setBool('logged_in_with_google', true);
-
-      if (!mounted) return;
-      await _navigateAfterLogin(user.id);
-    } on SocketException catch (e) {
-      debugPrint('❌ No internet connection: $e');
-      if (!mounted) return;
-      _showSnackBar(
-        'Tidak ada koneksi internet. Mohon periksa koneksi Anda dan coba lagi.',
-        false,
-      );
-    } catch (e) {
-      debugPrint('❌ Error during Google Sign In: $e');
-      if (!mounted) return;
-
-      String errorMessage =
-          '${AppLanguage.tr('google_signin_failed')}: ${e.toString()}';
-
-      if (e.toString().toLowerCase().contains('socketexception') ||
-          e.toString().toLowerCase().contains('failed host lookup')) {
-        errorMessage =
-            'Tidak ada koneksi internet. Mohon periksa koneksi Anda.';
-      }
-
-      _showSnackBar(errorMessage, false);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   void _showSnackBar(String message, bool isSuccess) {
     if (!mounted) return;
 
@@ -674,68 +559,6 @@ class _ModernLoginScreenState extends State<ModernLoginScreen> {
                         ),
 
                         const SizedBox(height: 24),
-
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Divider(color: Colors.grey.shade300),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              child: Text(
-                                AppLanguage.tr('or'),
-                                style: TextStyle(
-                                  color: Colors.grey.shade500,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Divider(color: Colors.grey.shade300),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Google Sign In Button
-                        SizedBox(
-                          width: double.infinity,
-                          height: 54,
-                          child: OutlinedButton(
-                            onPressed: _isLoading ? null : _signInWithGoogle,
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: Colors.grey.shade300),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              backgroundColor: Colors.white,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  'assets/logo/logo_google.png',
-                                  width: 20,
-                                  height: 20,
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  AppLanguage.tr('sign_in_with_google'),
-                                  style: const TextStyle(
-                                    color: Colors.black87,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 8),
 
                         Padding(
                           padding: EdgeInsets.zero,
