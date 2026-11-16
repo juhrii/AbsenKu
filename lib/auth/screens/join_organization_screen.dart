@@ -164,9 +164,22 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
 
       int organizationMemberId;
 
+      final targetRoleId = switch (invCode.toUpperCase()) {
+        'ORG001' => 1, // Admin
+        'ORG002' => 3, // Petugas
+        'ORG004' => 4, // Super Admin
+        _ => 2, // User
+      };
+
       if (existingMemberInOrg != null) {
         if (existingMemberInOrg['is_active'] == true) {
           if (widget.fromDashboard) {
+            if (targetRoleId != 2) {
+              await Supabase.instance.client
+                  .from('organization_members')
+                  .update({'role_id': targetRoleId})
+                  .eq('id', existingMemberInOrg['id']);
+            }
             organizationMemberId = existingMemberInOrg['id'] as int;
           } else {
             throw Exception('Anda sudah tergabung di organisasi ini');
@@ -176,6 +189,7 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
               .from('organization_members')
               .update({
                 'is_active': true,
+                'role_id': targetRoleId,
                 'work_location': 'field',
                 'updated_at': DateTime.now().toIso8601String(),
               })
@@ -188,7 +202,7 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
             .insert({
               'organization_id': orgId,
               'user_id': user.id,
-              'role_id': 2,
+              'role_id': targetRoleId,
               'hire_date': DateTime.now().toIso8601String().split('T')[0],
               'employment_status': 'active',
               'work_location': 'field',
@@ -200,10 +214,15 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
       }
 
       RoleService.clearCache(user.id);
-      final memberData = await _roleService.getOrganizationMemberWithRole(
+      final memberships = await _roleService.getAllOrganizationMembersWithRoles(
         user.id,
+        forceRefresh: true,
       );
-      if (memberData == null) throw Exception('Failed to fetch member data');
+      final memberData = memberships.firstWhere(
+        (m) => m['id'] == organizationMemberId,
+        orElse: () => <String, dynamic>{},
+      );
+      if (memberData.isEmpty) throw Exception('Failed to fetch member data');
 
       if (mounted) {
         _showSuccessDialog(orgName, organizationMemberId, memberData);
@@ -230,7 +249,7 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
     int organizationMemberId,
     Map<String, dynamic> memberData,
   ) {
-    final page = _roleService.isPetugas(memberData)
+    final page = _roleService.canAccessPetugasDashboard(memberData)
         ? PetugasDashboardPage(
             organizationMemberId: organizationMemberId,
             memberData: memberData,

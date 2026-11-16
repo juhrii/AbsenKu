@@ -295,8 +295,7 @@ class _SplashScreenState extends State<SplashScreen>
   void _navigateToDashboard(Map<String, dynamic> memberData) {
     final organizationMemberId = memberData['id'] as int;
 
-    final roleCode = _roleService.getRoleCode(memberData);
-    if (_roleService.isPetugas(memberData) || roleCode == 'SA001') {
+    if (_roleService.canAccessPetugasDashboard(memberData)) {
       // ✅ DIPERBAIKI: menggunakan pushReplacement dengan context langsung
       Navigator.pushReplacement(
         context,

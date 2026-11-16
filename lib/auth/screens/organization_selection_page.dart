@@ -16,7 +16,7 @@ class OrganizationSelectionPage extends StatelessWidget {
   ) {
     final organizationMemberId = membership['id'] as int;
 
-    if (_roleService.isPetugas(membership)) {
+    if (_roleService.canAccessPetugasDashboard(membership)) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => PetugasDashboardPage(

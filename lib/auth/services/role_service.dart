@@ -128,6 +128,12 @@ class RoleService {
     return result;
   }
 
+  /// Check if user can access the Petugas/Admin dashboard (Admin, Petugas, Super Admin)
+  bool canAccessPetugasDashboard(Map<String, dynamic>? memberData) {
+    final roleCode = getRoleCode(memberData);
+    return roleCode == 'P001' || roleCode == 'A001' || roleCode == 'SA001';
+  }
+
   /// Get role display name
   String getRoleName(Map<String, dynamic>? memberData) {
     if (memberData == null || memberData['system_roles'] == null) {

@@ -104,6 +104,7 @@ class MemberPerformanceService {
             user_id,
             role_id,
             department_id,
+            position_id,
             employee_id,
             is_active,
             user_profiles!inner(
@@ -159,8 +160,11 @@ class MemberPerformanceService {
 
       // Execute query with range - Sorted by name A-Z (Standard Nasional)
       final response = await query
-          .order('display_name',
-              referencedTable: 'user_profiles', ascending: true)
+          .order(
+            'display_name',
+            referencedTable: 'user_profiles',
+            ascending: true,
+          )
           .range(fromIndex, toIndex);
 
       debugPrint('Members fetched: ${response.length}');
@@ -227,6 +231,42 @@ class MemberPerformanceService {
     } catch (e) {
       debugPrint('!!! ERROR in getOrganizationMembersCount: $e');
       return 0;
+    }
+  }
+
+  /// Fetch all active departments (Jurusan) for an organization
+  Future<List<Map<String, dynamic>>> getOrganizationDepartments(
+    int organizationId,
+  ) async {
+    try {
+      final response = await _supabase
+          .from('departments')
+          .select('id, name, code')
+          .eq('organization_id', organizationId)
+          .eq('is_active', true)
+          .order('name', ascending: true);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint('!!! ERROR in getOrganizationDepartments: $e');
+      return [];
+    }
+  }
+
+  /// Fetch all active positions/classes (Kelas) for an organization
+  Future<List<Map<String, dynamic>>> getOrganizationPositions(
+    int organizationId,
+  ) async {
+    try {
+      final response = await _supabase
+          .from('positions')
+          .select('id, title, code')
+          .eq('organization_id', organizationId)
+          .eq('is_active', true)
+          .order('title', ascending: true);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint('!!! ERROR in getOrganizationPositions: $e');
+      return [];
     }
   }
 
@@ -336,7 +376,7 @@ class MemberPerformanceService {
         }
         memberRecordsCheck[mId]!.add(record);
       }
-    
+
       // Create performance data
       final performers = <Map<String, dynamic>>[];
 

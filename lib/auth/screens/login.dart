@@ -179,9 +179,8 @@ class _ModernLoginScreenState extends State<ModernLoginScreen> {
     if (!mounted) return;
 
     final organizationMemberId = memberData['id'] as int;
-    final roleCode = _roleService.getRoleCode(memberData);
 
-    if (_roleService.isPetugas(memberData) || roleCode == 'SA001') {
+    if (_roleService.canAccessPetugasDashboard(memberData)) {
       debugPrint('✓ User is Admin - navigating to Petugas Dashboard');
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(

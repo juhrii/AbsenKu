@@ -127,6 +127,7 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
 
       await Future.wait([
         _loadOrganizationData(),
+        _loadDepartmentsList(organizationId),
         _loadOrganizationMembersOptimized(page: 1, isInitial: true),
       ]);
 
@@ -136,6 +137,25 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
     }
 
     _loadRecentActivitiesOptimized();
+  }
+
+  Future<void> _loadDepartmentsList(int organizationId) async {
+    final depts = await _performanceService.getOrganizationDepartments(
+      organizationId,
+    );
+    if (!mounted) return;
+    final names = depts
+        .map((d) => (d['name'] ?? '').toString().trim())
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    setState(() {
+      _departments = ['all', ...names];
+      if (!_departments.contains(_selectedDepartment)) {
+        _selectedDepartment = 'all';
+      }
+    });
   }
 
   Future<void> _loadOrganizationMembersOptimized({
@@ -201,16 +221,16 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
             _totalPages = (_totalMembers / _pageSize).ceil();
           }
 
-          if (_departments.length <= 1 && members.isNotEmpty) {
-            final deptSet = <String>{'all'};
+          if (members.isNotEmpty) {
+            final deptSet = <String>{..._departments, 'all'};
             for (final member in members) {
               final dept = member['departments'] as Map<String, dynamic>?;
               if (dept != null && dept['name'] != null) {
                 deptSet.add(dept['name'] as String);
               }
             }
-            _departments = deptSet.toList()..sort();
-            debugPrint('✅ Departments initialized: $_departments');
+            final sorted = deptSet.where((d) => d != 'all').toList()..sort();
+            _departments = ['all', ...sorted];
           }
 
           if (!isInitial) _isContentLoading = false;
@@ -1189,7 +1209,7 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
               const SizedBox(width: 6),
               Container(
                 height: 36,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
                   color: widget.isDarkMode
                       ? Colors.white.withOpacity(0.05)
@@ -1198,7 +1218,7 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
-                    value: _selectedDepartment,
+                    value: _selectedBioFilter,
                     isDense: true,
                     icon: Icon(
                       Icons.filter_list,
@@ -1212,25 +1232,30 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                     dropdownColor: widget.isDarkMode
                         ? const Color(0xFF162E4E)
                         : Colors.white,
-                    items: _departments.map<DropdownMenuItem<String>>((
-                      String value,
-                    ) {
-                      return DropdownMenuItem(
-                        value: value,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 50),
-                          child: Text(
-                            value == 'all' ? AppLanguage.tr('all') : value,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 10),
-                          ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'all',
+                        child: Text('Semua', style: TextStyle(fontSize: 11)),
+                      ),
+                      DropdownMenuItem(
+                        value: 'has_face',
+                        child: Text(
+                          'Sudah Wajah',
+                          style: TextStyle(fontSize: 11),
                         ),
-                      );
-                    }).toList(),
+                      ),
+                      DropdownMenuItem(
+                        value: 'no_face',
+                        child: Text(
+                          'Belum Wajah',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                      ),
+                    ],
                     onChanged: (String? newValue) {
                       if (newValue != null) {
                         setState(() {
-                          _selectedDepartment = newValue;
+                          _selectedBioFilter = newValue;
                         });
                         _loadOrganizationMembersOptimized(isInitial: false);
                       }
@@ -1244,11 +1269,12 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: [
-                _buildBioFilterChip('all', 'Semua'),
-                _buildBioFilterChip('no_face', 'Belum Wajah'),
-                _buildBioFilterChip('has_face', 'Sudah Wajah'),
-              ],
+              children: _departments.map((dept) {
+                return _buildDepartmentFilterChip(
+                  dept,
+                  dept == 'all' ? 'Semua' : dept,
+                );
+              }).toList(),
             ),
           ),
         ],
@@ -1256,36 +1282,38 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
     );
   }
 
-  Widget _buildBioFilterChip(String value, String label) {
-    final isSelected = _selectedBioFilter == value;
+  Widget _buildDepartmentFilterChip(String value, String label) {
+    final isSelected = _selectedDepartment == value;
     return Padding(
       padding: const EdgeInsets.only(right: 6),
-      child: ChoiceChip(
+      child: FilterChip(
         label: Text(label),
         selected: isSelected,
+        showCheckmark: true,
+        checkmarkColor: Colors.white,
         onSelected: (selected) {
-          if (selected) {
-            setState(() {
-              _selectedBioFilter = value;
-            });
-            _loadOrganizationMembersOptimized(isInitial: false);
-          }
+          setState(() {
+            _selectedDepartment = value;
+          });
+          _loadOrganizationMembersOptimized(page: 1, isInitial: false);
         },
         labelStyle: TextStyle(
-          fontSize: 10,
+          fontSize: 11,
           color: isSelected
               ? Colors.white
               : (widget.isDarkMode ? Colors.white70 : Colors.black87),
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
         ),
         selectedColor: const Color(0xFF2563EB),
         backgroundColor: widget.isDarkMode
             ? Colors.white.withOpacity(0.05)
             : Colors.grey.shade100,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: isSelected ? Colors.transparent : Colors.grey.shade200,
+            color: isSelected
+                ? Colors.transparent
+                : (widget.isDarkMode ? Colors.white10 : Colors.grey.shade200),
           ),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
@@ -1649,14 +1677,18 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
     final position = member['positions'] as Map<String, dynamic>?;
 
     String roleName = AppLanguage.tr('Petugas.members.member');
-    final posTitle = position?['title'] ?? position?['name'];
-    if (department != null && posTitle != null) {
-      roleName = '${department['name']} • $posTitle';
-    } else {
-      roleName =
-          posTitle ??
-          department?['name'] ??
-          AppLanguage.tr('Petugas.members.member');
+    final deptName = department?['name'] as String?;
+    final posTitle = (position?['title'] ?? position?['name']) as String?;
+    if (posTitle != null && posTitle.isNotEmpty) {
+      if (deptName != null &&
+          deptName.isNotEmpty &&
+          !posTitle.toLowerCase().contains(deptName.toLowerCase())) {
+        roleName = '$deptName • $posTitle';
+      } else {
+        roleName = posTitle;
+      }
+    } else if (deptName != null && deptName.isNotEmpty) {
+      roleName = deptName;
     }
 
     final photoUrl = _getMemberPhotoUrl(member);
@@ -1863,15 +1895,13 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
       }
     }
 
-    String deptName = AppLanguage.tr('Petugas.members.no_department');
-    final posTitle = position?['title'] ?? position?['name'];
-    if (department != null && posTitle != null) {
-      deptName = department['name'];
-    } else {
-      deptName =
-          department?['name'] ??
-          AppLanguage.tr('Petugas.members.no_department');
-    }
+    final deptName =
+        (department?['name'] as String?) ??
+        AppLanguage.tr('Petugas.members.no_department');
+    final posTitle = (position?['title'] ?? position?['name']) as String?;
+    final classLabel = (posTitle != null && posTitle.isNotEmpty)
+        ? posTitle
+        : 'Belum Ada Kelas';
 
     final empId = member['employee_id'] ?? '#----';
 
@@ -1973,7 +2003,17 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                '${AppLanguage.tr('Petugas.members.department')} $deptName',
+                                'Jurusan: $deptName',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Kelas: $classLabel',
                                 style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 13,
@@ -2415,27 +2455,38 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
     );
 
     int? selectedDeptId = member['department_id'] as int?;
+    int? selectedPosId =
+        (member['position_id'] as int?) ??
+        ((member['positions'] as Map<String, dynamic>?)?['id'] as int?);
     String selectedGender = profile['jenis_kelamin'] ?? 'male';
 
     List<Map<String, dynamic>> availableDepartments = [];
+    List<Map<String, dynamic>> availablePositions = [];
     bool isLoadingDepts = true;
 
-    // Load real departments from Supabase
-    Future<void> loadDepts(Function(void Function()) setLocalState) async {
+    // Load Jurusan (departments) & Kelas (positions) from Supabase
+    bool hasTriggeredLoad = false;
+    Future<void> loadDepts(
+      BuildContext sheetContext,
+      Function(void Function()) setLocalState,
+    ) async {
       try {
         final organizationId = widget.memberData['organization_id'] as int;
-        final res = await _supabase
-            .from('departments')
-            .select('id, name')
-            .eq('organization_id', organizationId)
-            .order('name');
+        final results = await Future.wait<List<Map<String, dynamic>>>([
+          _performanceService.getOrganizationDepartments(organizationId),
+          _performanceService.getOrganizationPositions(organizationId),
+        ]);
+        if (!sheetContext.mounted) return;
         setLocalState(() {
-          availableDepartments = List<Map<String, dynamic>>.from(res);
+          availableDepartments = results[0];
+          availablePositions = results[1];
           isLoadingDepts = false;
         });
       } catch (e) {
-        debugPrint('Error loading depts: $e');
-        setLocalState(() => isLoadingDepts = false);
+        debugPrint('Error loading jurusan/kelas: $e');
+        if (sheetContext.mounted) {
+          setLocalState(() => isLoadingDepts = false);
+        }
       }
     }
 
@@ -2445,8 +2496,9 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setSheetState) {
-          if (isLoadingDepts) {
-            loadDepts(setSheetState);
+          if (!hasTriggeredLoad) {
+            hasTriggeredLoad = true;
+            loadDepts(context, setSheetState);
           }
 
           return Container(
@@ -2527,12 +2579,12 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                     keyboardType: TextInputType.phone,
                   ),
 
-                  // --- DEPARTMENT SELECTOR ---
+                  // --- JURUSAN SELECTOR ---
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Departemen',
+                        'Jurusan',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -2545,13 +2597,12 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                           if (newDeptName != null && newDeptName.isNotEmpty) {
                             _showProcessingOverlay(
                               context,
-                              'Menambah departemen...',
+                              'Menambah jurusan...',
                             );
                             try {
                               final orgId =
                                   widget.memberData['organization_id'] as int;
 
-                              // ✅ PERBAIKAN: Tambahkan 'code' otomatis dari nama
                               final String deptCode = newDeptName
                                   .toUpperCase()
                                   .replaceAll(' ', '_');
@@ -2560,8 +2611,7 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                                   .from('departments')
                                   .insert({
                                     'name': newDeptName,
-                                    'code':
-                                        deptCode, // Tambahkan ini agar database menerima
+                                    'code': deptCode,
                                     'organization_id': orgId,
                                   })
                                   .select()
@@ -2570,17 +2620,15 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                               if (mounted) {
                                 Navigator.pop(context); // Close overlay
                                 _showSuccessSnackBar(
-                                  'Departemen "$newDeptName" berhasil ditambahkan!',
+                                  'Jurusan "$newDeptName" berhasil ditambahkan!',
                                 );
 
-                                // ✅ PERBAIKAN: Masukkan ke list lokal dulu agar dropdown tidak crash (Layar Merah)
                                 setSheetState(() {
                                   final newDept = {
                                     'id': res['id'],
                                     'name': res['name'],
                                   };
 
-                                  // Update list lokal
                                   availableDepartments.add(newDept);
                                   availableDepartments.sort(
                                     (a, b) => (a['name'] as String).compareTo(
@@ -2588,15 +2636,15 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                                     ),
                                   );
 
-                                  // Sekarang aman untuk set ID karena item sudah ada di list
                                   selectedDeptId = res['id'] as int;
                                 });
+                                _loadDepartmentsList(orgId);
                               }
                             } catch (e) {
                               if (mounted) {
                                 Navigator.pop(context);
                                 _showErrorDialog(
-                                  'Gagal menambah departemen: $e',
+                                  'Gagal menambah jurusan: $e',
                                 );
                               }
                             }
@@ -2626,7 +2674,6 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<int?>(
-                        // ✅ PERBAIKAN: Pastikan value tersedia di items agar tidak crash (Layar Merah)
                         value:
                             (isLoadingDepts ||
                                 !availableDepartments.any(
@@ -2636,7 +2683,7 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                             : selectedDeptId,
                         isExpanded: true,
                         hint: Text(
-                          isLoadingDepts ? 'Memuat...' : 'Pilih Departemen',
+                          isLoadingDepts ? 'Memuat...' : 'Pilih Jurusan',
                           style: const TextStyle(fontSize: 14),
                         ),
                         dropdownColor: widget.isDarkMode
@@ -2646,7 +2693,7 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                           const DropdownMenuItem<int?>(
                             value: null,
                             child: Text(
-                              'Tidak Ada Departemen',
+                              'Belum Ada Jurusan',
                               style: TextStyle(fontSize: 14),
                             ),
                           ),
@@ -2666,8 +2713,142 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                     ),
                   ),
 
+                  // --- KELAS SELECTOR ---
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Kelas',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () async {
+                          final newClassName = await _showCreateClassDialog();
+                          if (newClassName != null &&
+                              newClassName.isNotEmpty) {
+                            _showProcessingOverlay(
+                              context,
+                              'Menambah kelas...',
+                            );
+                            try {
+                              final orgId =
+                                  widget.memberData['organization_id'] as int;
+                              final String classCode = newClassName
+                                  .toUpperCase()
+                                  .replaceAll(' ', '_');
+
+                              final res = await _supabase
+                                  .from('positions')
+                                  .insert({
+                                    'title': newClassName,
+                                    'code': classCode,
+                                    'organization_id': orgId,
+                                  })
+                                  .select()
+                                  .single();
+
+                              if (mounted) {
+                                Navigator.pop(context); // Close overlay
+                                _showSuccessSnackBar(
+                                  'Kelas "$newClassName" berhasil ditambahkan!',
+                                );
+
+                                setSheetState(() {
+                                  final newPos = {
+                                    'id': res['id'],
+                                    'title': res['title'],
+                                  };
+
+                                  availablePositions.add(newPos);
+                                  availablePositions.sort(
+                                    (a, b) =>
+                                        (a['title'] as String).compareTo(
+                                          b['title'] as String,
+                                        ),
+                                  );
+
+                                  selectedPosId = res['id'] as int;
+                                });
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                Navigator.pop(context);
+                                _showErrorDialog(
+                                  'Gagal menambah kelas: $e',
+                                );
+                              }
+                            }
+                          }
+                        },
+                        child: Text(
+                          '+ Tambah Baru',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF2563EB),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: widget.isDarkMode
+                          ? Colors.white.withOpacity(0.05)
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int?>(
+                        value:
+                            (isLoadingDepts ||
+                                !availablePositions.any(
+                                  (p) => p['id'] == selectedPosId,
+                                ))
+                            ? null
+                            : selectedPosId,
+                        isExpanded: true,
+                        hint: Text(
+                          isLoadingDepts ? 'Memuat...' : 'Pilih Kelas',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        dropdownColor: widget.isDarkMode
+                            ? const Color(0xFF162E4E)
+                            : Colors.white,
+                        items: [
+                          const DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text(
+                              'Belum Ada Kelas',
+                              style: TextStyle(fontSize: 14),
+                            ),
+                          ),
+                          ...availablePositions.map(
+                            (pos) => DropdownMenuItem<int?>(
+                              value: pos['id'] as int,
+                              child: Text(
+                                (pos['title'] ?? '') as String,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ),
+                          ),
+                        ],
+                        onChanged: (val) =>
+                            setSheetState(() => selectedPosId = val),
+                      ),
+                    ),
+                  ),
+
                   _buildEditField(
-                    'ID Karyawan',
+                    'NIS / ID Anggota',
                     employeeIdController,
                     Icons.confirmation_number_outlined,
                   ),
@@ -2716,6 +2897,7 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                           },
                           employeeIdController.text.trim(),
                           selectedDeptId,
+                          selectedPosId,
                         );
                       },
                       style: ElevatedButton.styleFrom(
@@ -2837,6 +3019,7 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
     Map<String, dynamic> profileData,
     String employeeId,
     int? departmentId,
+    int? positionId,
   ) async {
     _showProcessingOverlay(context, 'Memperbarui profil...');
     try {
@@ -2847,7 +3030,11 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
 
       await _supabase
           .from('organization_members')
-          .update({'employee_id': employeeId, 'department_id': departmentId})
+          .update({
+            'employee_id': employeeId,
+            'department_id': departmentId,
+            'position_id': positionId,
+          })
           .eq('id', memberId);
 
       if (mounted) {
@@ -2911,6 +3098,26 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
   }
 
   Future<String?> _showCreateDeptDialog() async {
+    return _showCreateNamedOptionDialog(
+      title: 'Tambah Jurusan Baru',
+      subtitle: 'Masukkan nama jurusan baru untuk sekolah/organisasi ini.',
+      hintText: 'Misal: RPL, TKJ, DKV',
+    );
+  }
+
+  Future<String?> _showCreateClassDialog() async {
+    return _showCreateNamedOptionDialog(
+      title: 'Tambah Kelas Baru',
+      subtitle: 'Masukkan nama kelas baru untuk sekolah/organisasi ini.',
+      hintText: 'Misal: XII RPL 1, XI TKJ 2',
+    );
+  }
+
+  Future<String?> _showCreateNamedOptionDialog({
+    required String title,
+    required String subtitle,
+    required String hintText,
+  }) async {
     final TextEditingController controller = TextEditingController();
     return showDialog<String>(
       context: context,
@@ -2919,7 +3126,7 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
             ? const Color(0xFF162E4E)
             : Colors.white,
         title: Text(
-          'Tambah Departemen Baru',
+          title,
           style: TextStyle(
             color: widget.isDarkMode ? Colors.white : Colors.black87,
             fontWeight: FontWeight.bold,
@@ -2929,7 +3136,7 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Masukkan nama departemen baru untuk organisasi ini.',
+              subtitle,
               style: TextStyle(
                 fontSize: 13,
                 color: widget.isDarkMode
@@ -2945,7 +3152,7 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                 color: widget.isDarkMode ? Colors.white : Colors.black87,
               ),
               decoration: InputDecoration(
-                hintText: 'Misal: IT, Marketing, HRD',
+                hintText: hintText,
                 hintStyle: const TextStyle(fontSize: 14, color: Colors.grey),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),

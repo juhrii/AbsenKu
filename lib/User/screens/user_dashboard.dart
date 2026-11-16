@@ -190,8 +190,7 @@ class _UserDashboardPageState extends State<UserDashboardPage>
       return;
     }
 
-    final roleCode = _roleService.getRoleCode(selectedMembership);
-    if (_roleService.isPetugas(selectedMembership) || roleCode == 'SA001') {
+    if (_roleService.canAccessPetugasDashboard(selectedMembership)) {
       Navigator.pushAndRemoveUntil(
         context,
         PageRouteBuilder(

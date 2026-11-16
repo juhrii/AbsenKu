@@ -604,8 +604,7 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
     if (selectedMembership['id'] == widget.organizationMemberId) return;
 
     // Navigasi berdasarkan role — dilakukan di context dashboard (valid)
-    final roleCode = _roleService.getRoleCode(selectedMembership);
-    if (_roleService.isPetugas(selectedMembership) || roleCode == 'SA001') {
+    if (_roleService.canAccessPetugasDashboard(selectedMembership)) {
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(

@@ -511,6 +511,37 @@ from public.organizations o
 where o.code in ('ORG001', 'ORG002', 'ORG003', 'ORG004')
 on conflict (organization_id, device_code) do nothing;
 
+-- Default Jurusan (departments) & Kelas (positions) untuk sekolah
+insert into public.departments (organization_id, code, name, description, is_active)
+select o.id, d.code, d.name, d.description, true
+from public.organizations o
+cross join (
+  values
+    ('RPL', 'RPL', 'Rekayasa Perangkat Lunak'),
+    ('TKJ', 'TKJ', 'Teknik Komputer dan Jaringan')
+) as d(code, name, description)
+where o.code in ('ORG001', 'ORG002', 'ORG003', 'ORG004')
+on conflict (organization_id, code) do update set
+  name = excluded.name,
+  is_active = true;
+
+insert into public.positions (organization_id, code, title, description, is_active)
+select o.id, p.code, p.title, p.description, true
+from public.organizations o
+cross join (
+  values
+    ('X_RPL_1', 'X RPL 1', 'Kelas X RPL 1'),
+    ('XI_RPL_1', 'XI RPL 1', 'Kelas XI RPL 1'),
+    ('XII_RPL_1', 'XII RPL 1', 'Kelas XII RPL 1'),
+    ('X_TKJ_1', 'X TKJ 1', 'Kelas X TKJ 1'),
+    ('XI_TKJ_1', 'XI TKJ 1', 'Kelas XI TKJ 1'),
+    ('XII_TKJ_1', 'XII TKJ 1', 'Kelas XII TKJ 1')
+) as p(code, title, description)
+where o.code in ('ORG001', 'ORG002', 'ORG003', 'ORG004')
+on conflict (organization_id, code) do update set
+  title = excluded.title,
+  is_active = true;
+
 -- Default shifts for all 4 organizations
 insert into public.shifts (
   organization_id, code, name, description, start_time, end_time, break_start, break_end, break_duration_minutes, is_active
