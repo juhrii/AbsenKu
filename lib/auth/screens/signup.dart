@@ -120,7 +120,9 @@ class _ModernSignupScreenState extends State<ModernSignupScreen> {
       if (errorString.contains('invalid email')) {
         return AppLanguage.tr('email_invalid');
       }
-      if (errorString.contains('weak password')) {
+      if (errorString.contains('weak password') ||
+          errorString.contains('password should be at least') ||
+          errorString.contains('password is too short')) {
         return AppLanguage.tr('weak_password');
       }
       if (errorString.contains('over_email_send_rate_limit') ||
@@ -134,10 +136,12 @@ class _ModernSignupScreenState extends State<ModernSignupScreen> {
         return 'Tidak ada koneksi internet. Mohon periksa koneksi Anda dan coba lagi.';
       }
 
-      // Return raw error string for debugging
-      return errorString;
+      // Jangan tampilkan pesan mentah (Inggris) dari Supabase ke pengguna
+      debugPrint('Unmapped signup error: $error');
+      return AppLanguage.tr('signup_error');
     } catch (e) {
-      return 'Error: $e';
+      debugPrint('Signup error parser failure: $e');
+      return AppLanguage.tr('signup_error');
     }
   }
 
@@ -388,7 +392,7 @@ class _ModernSignupScreenState extends State<ModernSignupScreen> {
                         const SizedBox(height: 6),
                         _buildTextField(
                           controller: _nameController,
-                          hintText: 'Enter your full name',
+                          hintText: AppLanguage.tr('full_name_hint'),
                           keyboardType: TextInputType.name,
                           textCapitalization: TextCapitalization.words,
                           validator: (value) {
@@ -409,7 +413,7 @@ class _ModernSignupScreenState extends State<ModernSignupScreen> {
                         const SizedBox(height: 6),
                         _buildTextField(
                           controller: _emailController,
-                          hintText: 'name@school.edu',
+                          hintText: 'nama@sekolah.sch.id',
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {

@@ -84,12 +84,13 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
               profile['display_name'] ??
               profile['first_name'] ??
               user.email?.split('@')[0] ??
-              'User';
+              AppLanguage.tr('default_user');
           _profilePhotoUrl = profile['profile_photo_url'];
         });
       } else {
         setState(() {
-          _displayName = user.email?.split('@')[0] ?? 'User';
+          _displayName =
+              user.email?.split('@')[0] ?? AppLanguage.tr('default_user');
         });
       }
 
@@ -418,7 +419,7 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
                             ),
                             const SizedBox(width: 12),
                             Text(
-                              _displayName ?? 'User',
+                              _displayName ?? AppLanguage.tr('default_user'),
                               style: const TextStyle(
                                 color: Colors.black87,
                                 fontSize: 16,
@@ -445,7 +446,7 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
                           child: Row(
                             children: [
                               Text(
-                                'LOGOUT',
+                                AppLanguage.tr('join_org_logout').toUpperCase(),
                                 style: TextStyle(
                                   color: Colors.red.shade600,
                                   fontSize: 12,
@@ -509,8 +510,8 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          const Text(
-                            'Enter Access Key',
+                          Text(
+                            AppLanguage.tr('join_org_access_key'),
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
@@ -519,10 +520,10 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
-                              'Enter the invitation code provided\nby your HR or Admin.',
+                              AppLanguage.tr('join_org_subtitle'),
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 14,
@@ -540,7 +541,7 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
                                 bottom: 8,
                               ),
                               child: Text(
-                                'ORGANIZATION CODE',
+                                AppLanguage.tr('join_org_code_label'),
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
@@ -623,20 +624,20 @@ class _JoinOrganizationScreenState extends State<JoinOrganizationScreen> {
                                           strokeWidth: 2,
                                         ),
                                       )
-                                    : const Row(
+                                    : Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
                                         children: [
                                           Text(
-                                            'Join Organization',
-                                            style: TextStyle(
+                                            AppLanguage.tr('join_org_button'),
+                                            style: const TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white,
                                             ),
                                           ),
-                                          SizedBox(width: 8),
-                                          Icon(
+                                          const SizedBox(width: 8),
+                                          const Icon(
                                             Icons.arrow_forward_rounded,
                                             color: Colors.white,
                                             size: 20,

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:absenku/Petugas/screens/petugas_dashboard.dart';
 import 'package:absenku/User/screens/user_dashboard.dart';
 import 'package:absenku/auth/services/role_service.dart';
+import 'package:absenku/helpers/language_helper.dart';
 
 class OrganizationSelectionPage extends StatelessWidget {
   final List<Map<String, dynamic>> memberships;
@@ -50,7 +51,7 @@ class OrganizationSelectionPage extends StatelessWidget {
             children: [
               const SizedBox(height: 20),
               Text(
-                'Select Organization',
+                AppLanguage.tr('select_organization'),
                 style: GoogleFonts.montserrat(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -59,7 +60,7 @@ class OrganizationSelectionPage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'You are a member of multiple organizations.\nPlease select one to continue.',
+                AppLanguage.tr('select_organization_subtitle'),
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 32),
@@ -120,7 +121,7 @@ class OrganizationSelectionPage extends StatelessWidget {
                                 children: [
                                   Text(
                                     organization['name'] ??
-                                        'Unknown Organization',
+                                        AppLanguage.tr('unknown_organization'),
                                     style: GoogleFonts.roboto(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,

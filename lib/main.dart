@@ -15,7 +15,6 @@ import 'package:absenku/providers/timezone_provider.dart';
 import 'package:absenku/providers/theme_provider.dart';
 import 'package:absenku/attendance/services/attendance_sync_service.dart';
 import 'package:absenku/services/objectbox_service.dart'; // ✅ Added ObjectBox Service
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -336,80 +335,28 @@ class _SplashScreenState extends State<SplashScreen>
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ScaleTransition(
-                scale: _scaleAnimation,
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.25),
-                        blurRadius: 30,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
-                  ),
-                  child: Image.asset(
-                    'assets/logo/app_icon_splash.png',
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 36),
-              Column(
-                children: [
-                  Text(
-                    'ABSENKU',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 4.0,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: Colors.white.withOpacity(0.25)),
-                    ),
-                    child: Text(
-                      'PLATFORM ABSENSI SEKOLAH',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFFE0F2FE),
-                        letterSpacing: 2.0,
-                      ),
-                    ),
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: Container(
+              width: 140,
+              height: 140,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.25),
+                    blurRadius: 30,
+                    offset: const Offset(0, 12),
                   ),
                 ],
               ),
-              const SizedBox(height: 90),
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    Colors.white.withOpacity(0.9),
-                  ),
-                ),
+              child: Image.asset(
+                'assets/logo/app_icon_splash.png',
+                fit: BoxFit.cover,
               ),
-            ],
+            ),
           ),
         ),
       ),
