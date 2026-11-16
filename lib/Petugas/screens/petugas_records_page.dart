@@ -1586,7 +1586,7 @@ class _PetugasRecordsPageState extends State<PetugasRecordsPage> {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              '+${lateMinutes}m Late',
+              '+${lateMinutes}m Terlambat',
               style: TextStyle(
                 fontSize: 10,
                 color: warningColor,
@@ -1744,7 +1744,7 @@ class _PetugasRecordsPageState extends State<PetugasRecordsPage> {
                               if (employeeId.isNotEmpty) ...[
                                 const SizedBox(height: 2),
                                 Text(
-                                  'Employee ID: $employeeId',
+                                  'NIS / ID: $employeeId',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey.shade600,

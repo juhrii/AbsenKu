@@ -1480,7 +1480,7 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
                 children: [
                   Expanded(
                     child: Text(
-                      '$currentTime ${nowOrg.hour < 12 ? AppLanguage.tr('am') : AppLanguage.tr('pm')}',
+                      currentTime,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -2076,10 +2076,10 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
     if (method == null) return '-';
     final m = method.toString().toLowerCase();
     if (m.contains('rfid')) return 'RFID';
-    if (m.contains('face') || m.contains('wajah')) return 'FACE';
+    if (m.contains('face') || m.contains('wajah')) return 'WAJAH';
     if (m.contains('selfie')) return 'SELFIE';
     if (m.contains('manual')) return 'MANUAL';
-    if (m.contains('fingerprint')) return 'FINGER';
+    if (m.contains('fingerprint')) return 'SIDIK JARI';
     return method.toString().toUpperCase();
   }
 }

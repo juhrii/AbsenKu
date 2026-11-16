@@ -135,5 +135,17 @@
     "thu_short": "Kam",
     "fri_short": "Jum",
     "sat_short": "Sab",
-    "sun_short": "Min"
+    "sun_short": "Min",
+    "user": "Pengguna",
+    "office": "Sekolah",
+    "no_email": "Tidak ada email",
+    "All caught up!": "Semua sudah tersinkron!",
+    "All data synchronized": "Semua data telah disinkronkan",
+    "Done": "Selesai",
+    "Initializing...": "Mempersiapkan...",
+    "No pending data to sync": "Tidak ada data yang menunggu sinkronisasi",
+    "Sync failed": "Sinkronisasi gagal",
+    "Sync Now": "Sinkronkan Sekarang",
+    "Syncing Data": "Menyinkronkan Data",
+    "Syncing...": "Menyinkronkan..."
 }

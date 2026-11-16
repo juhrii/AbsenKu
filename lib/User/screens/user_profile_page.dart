@@ -548,7 +548,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     ),
                     // Email
                     Text(
-                      _supabase.auth.currentUser?.email ?? 'No email',
+                      _supabase.auth.currentUser?.email ?? 'Tidak ada email',
                       style: TextStyle(
                         fontSize: 16,
                         color: widget.isDarkMode
@@ -707,7 +707,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           _buildDivider(),
                           _buildInfoRow(
                             AppLanguage.tr('User.profile.gender'),
-                            _selectedGender.toUpperCase(),
+                            _selectedGender == 'female'
+                                ? AppLanguage.tr('female')
+                                : AppLanguage.tr('male'),
                           ),
                           _buildDivider(),
                           _buildInfoRow(
@@ -1238,185 +1240,58 @@ class _UserProfilePageState extends State<UserProfilePage> {
             ],
           ),
           const SizedBox(height: 16),
-          ValueListenableBuilder<String>(
-            valueListenable: LanguageHelper.languageNotifier,
-            builder: (context, currentLang, _) {
-              String langName = currentLang == LanguageHelper.indonesian
-                  ? 'Bahasa Indonesia'
-                  : (currentLang == LanguageHelper.english
-                        ? 'English'
-                        : 'العربية');
-              String flag = currentLang == LanguageHelper.indonesian
-                  ? '🇮🇩'
-                  : (currentLang == LanguageHelper.english ? '🇺🇸' : '🇸🇦');
-
-              return InkWell(
-                onTap: _showLanguageBottomSheet,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: widget.isDarkMode
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: widget.isDarkMode
+                    ? Colors.white12
+                    : Colors.grey.shade200,
+              ),
+            ),
+            child: Row(
+              children: [
+                const Text('🇮🇩', style: TextStyle(fontSize: 20)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Bahasa Indonesia',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: widget.isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+                Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+                    horizontal: 8,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: widget.isDarkMode
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: widget.isDarkMode
-                          ? Colors.white12
-                          : Colors.grey.shade200,
+                    color: const Color(0xFF10B981).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Aktif',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF10B981),
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Text(flag, style: const TextStyle(fontSize: 20)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          langName,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: widget.isDarkMode
-                                ? Colors.white
-                                : Colors.black87,
-                          ),
-                        ),
-                      ),
-                      const Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: Colors.grey,
-                      ),
-                    ],
-                  ),
                 ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showLanguageBottomSheet() async {
-    final currentLang = LanguageHelper.languageNotifier.value;
-
-    final result = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => _buildModernSelectMenu(
-        title: AppLanguage.tr('User.profile.language_settings'),
-        options: [
-          _buildLanguageSelectOption(
-            code: LanguageHelper.indonesian,
-            title: 'Bahasa Indonesia',
-            subtitle: 'Indonesian',
-            isSelected: currentLang == LanguageHelper.indonesian,
-          ),
-          _buildLanguageSelectOption(
-            code: LanguageHelper.english,
-            title: 'English',
-            subtitle: 'International',
-            isSelected: currentLang == LanguageHelper.english,
-          ),
-          _buildLanguageSelectOption(
-            code: LanguageHelper.arabic,
-            title: 'العربية',
-            subtitle: 'Arabic',
-            isSelected: currentLang == LanguageHelper.arabic,
-          ),
-        ],
-      ),
-    );
-
-    if (result != null) {
-      await AppLanguage.setLanguage(result);
-    }
-  }
-
-  Widget _buildLanguageSelectOption({
-    required String code,
-    required String title,
-    required String subtitle,
-    required bool isSelected,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () => Navigator.pop(context, code),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? const Color(0xFF2563EB).withValues(alpha: 0.1)
-                : (widget.isDarkMode
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.grey.shade50),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isSelected ? const Color(0xFF2563EB) : Colors.transparent,
-              width: 1.5,
+              ],
             ),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: widget.isDarkMode
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : Colors.grey.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    code == 'id' ? '🇮🇩' : (code == 'en' ? '🇺🇸' : '🇸🇦'),
-                    style: const TextStyle(fontSize: 24),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: widget.isDarkMode
-                            ? Colors.white
-                            : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: widget.isDarkMode
-                            ? Colors.white60
-                            : Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (isSelected)
-                const Icon(
-                  Icons.check_circle_rounded,
-                  color: Color(0xFF2563EB),
-                  size: 24,
-                ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }

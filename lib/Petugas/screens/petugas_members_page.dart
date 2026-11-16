@@ -969,9 +969,11 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
       itemCount: _recentActivities.length,
       itemBuilder: (context, index) {
         final activity = _recentActivities[index];
-        final memberName = activity['member_name'] as String? ?? 'Unknown';
-        final eventType = activity['event_type'] as String? ?? 'Unknown';
-        final timeAgo = activity['time_ago'] as String? ?? 'Just now';
+        final memberName =
+            activity['member_name'] as String? ?? 'Tidak Diketahui';
+        final eventType =
+            activity['event_type'] as String? ?? 'Tidak Diketahui';
+        final timeAgo = activity['time_ago'] as String? ?? 'Baru saja';
         final method = activity['method'] as String? ?? '';
         final memberInfo =
             activity['member_info'] as Map<String, dynamic>? ?? {};

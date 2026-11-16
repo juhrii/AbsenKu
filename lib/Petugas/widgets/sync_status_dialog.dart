@@ -258,7 +258,7 @@ class _SyncStatusDialogState extends State<SyncStatusDialog>
                   child: Row(
                     children: [
                       Text(
-                        'Records',
+                        'Catatan',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,

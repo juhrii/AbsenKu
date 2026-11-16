@@ -876,7 +876,7 @@ class MemberPerformanceService {
 
   String _getMemberName(Map<String, dynamic> member) {
     final profile = member['user_profiles'] as Map<String, dynamic>?;
-    if (profile == null) return 'Unknown User';
+    if (profile == null) return 'Pengguna Tidak Dikenal';
 
     final displayName = profile['display_name'] as String?;
     if (displayName != null && displayName.trim().isNotEmpty) {
@@ -886,11 +886,11 @@ class MemberPerformanceService {
     final firstName = profile['first_name'] as String? ?? '';
     final lastName = profile['last_name'] as String? ?? '';
     final fullName = '$firstName $lastName'.trim();
-    return fullName.isEmpty ? 'Unknown User' : fullName;
+    return fullName.isEmpty ? 'Pengguna Tidak Dikenal' : fullName;
   }
 
   String _formatTimeAgo(String? eventTimeString) {
-    if (eventTimeString == null) return 'Unknown time';
+    if (eventTimeString == null) return 'Waktu tidak diketahui';
 
     try {
       final eventTime = DateTime.parse(eventTimeString);
@@ -898,18 +898,18 @@ class MemberPerformanceService {
       final difference = now.difference(eventTime.toUtc());
 
       if (difference.inMinutes < 1) {
-        return 'Just now';
+        return 'Baru saja';
       } else if (difference.inMinutes < 60) {
-        return '${difference.inMinutes}m ago';
+        return '${difference.inMinutes} mnt lalu';
       } else if (difference.inHours < 24) {
-        return '${difference.inHours}h ago';
+        return '${difference.inHours} jam lalu';
       } else if (difference.inDays < 7) {
-        return '${difference.inDays}d ago';
+        return '${difference.inDays} hr lalu';
       } else {
-        return DateFormat('MMM d').format(eventTime);
+        return DateFormat('d MMM', 'id_ID').format(eventTime);
       }
     } catch (e) {
-      return 'Unknown time';
+      return 'Waktu tidak diketahui';
     }
   }
 

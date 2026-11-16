@@ -5,11 +5,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../attendance/services/biometric_service.dart';
 import '../../auth/services/role_service.dart';
 import '../../attendance/services/attendance_service.dart';
 import '../../models/attendance_record.dart';
-import '../../attendance/screens/face_registration_page.dart';
 import '../../auth/screens/login.dart';
 import '../../attendance/screens/export_report_screen.dart';
 import 'petugas_members_page.dart';
@@ -34,14 +32,11 @@ class PetugasProfilePage extends StatefulWidget {
 }
 
 class _PetugasProfilePageState extends State<PetugasProfilePage> {
-  final BiometricService _biometricService = BiometricService();
   final RoleService _roleService = RoleService();
   final AttendanceService _attendanceService = AttendanceService();
   final _supabase = Supabase.instance.client;
   final ImagePicker _picker = ImagePicker();
 
-  bool _hasRegisteredFace = false;
-  bool _isCheckingFace = true;
   bool _isLoadingProfile = false;
   bool _isLoadingAttendance = false;
   bool _isUploadingPhoto = false;
@@ -68,7 +63,6 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
     _displayNameController = TextEditingController();
     _phoneController = TextEditingController();
     _userProfile = widget.userProfile;
-    _checkFaceRegistration();
     _loadOrganizationInfo();
     _loadTodayAttendance();
     if (_userProfile == null) {
@@ -241,48 +235,6 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
           _isLoadingAttendance = false;
         });
       }
-    }
-  }
-
-  Future<void> _checkFaceRegistration() async {
-    setState(() {
-      _isCheckingFace = true;
-    });
-
-    try {
-      final hasRegistered = await _biometricService.hasRegisteredFace(
-        widget.organizationMemberId,
-      );
-
-      if (mounted) {
-        setState(() {
-          _hasRegisteredFace = hasRegistered;
-          _isCheckingFace = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('!!! ERROR checking face registration: $e');
-      if (mounted) {
-        setState(() {
-          _hasRegisteredFace = false;
-          _isCheckingFace = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _navigateToFaceRegistration() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FaceRegistrationPage(
-          organizationMemberId: widget.organizationMemberId,
-        ),
-      ),
-    );
-
-    if (result == true) {
-      _checkFaceRegistration();
     }
   }
 
@@ -546,7 +498,7 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
   }
 
   String _formatDate(String? dateStr) {
-    if (dateStr == null) return 'Not set';
+    if (dateStr == null) return 'Belum diisi';
     try {
       final date = DateTime.parse(dateStr);
       final months = [
@@ -603,8 +555,6 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
                           _buildProfileSection(),
                           const SizedBox(height: 32),
                           _buildAccountInformation(),
-                          const SizedBox(height: 32),
-                          _buildFaceRecognitionCard(),
                           const SizedBox(height: 16),
                           _buildAttendanceSettingsCard(),
                           const SizedBox(height: 16),
@@ -746,7 +696,7 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
 
   Widget _buildProfileSection() {
     final photoUrl = _getProfilePhotoUrl();
-    final userEmail = _supabase.auth.currentUser?.email ?? 'No email';
+    final userEmail = _supabase.auth.currentUser?.email ?? 'Tidak ada email';
     final location = _organization?['name'] ?? 'Memuat organisasi...';
 
     return Container(
@@ -868,16 +818,16 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
         : _getFullName();
     final phone = _phoneController.text.isNotEmpty
         ? _phoneController.text
-        : (_userProfile?['phone'] ?? 'Not set');
+        : (_userProfile?['phone'] ?? 'Belum diisi');
     final jeniskelaminValue = _userProfile?['jenis_kelamin'];
-    final employeeCode = _userProfile?['employee_code'] ?? 'Not set';
+    final employeeCode = _userProfile?['employee_code'] ?? 'Belum diisi';
     final position = _roleService.getRoleName(widget.memberData);
 
     final dobStr = _selectedDateOfBirth != null
         ? _formatDate(_selectedDateOfBirth!.toIso8601String())
         : (_userProfile?['date_of_birth'] != null
               ? _formatDate(_userProfile!['date_of_birth'])
-              : 'Not set');
+              : 'Belum diisi');
 
     final isMale = _selectedGender == 'male';
 
@@ -1022,7 +972,7 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
             ),
           ),
           Text(
-            value ?? 'Not set',
+            value ?? 'Belum diisi',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
@@ -1233,130 +1183,6 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
     );
   }
 
-  Widget _buildFaceRecognitionCard() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: widget.isDarkMode ? const Color(0xFF162E4E) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB).withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.face_unlock_rounded,
-                    color: Color(0xFF2563EB),
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppLanguage.tr('face_recognition'),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: widget.isDarkMode
-                              ? Colors.white
-                              : Colors.black87,
-                        ),
-                      ),
-                      Text(
-                        _hasRegisteredFace
-                            ? AppLanguage.tr('already_registered')
-                            : AppLanguage.tr('not_registered_yet'),
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: _hasRegisteredFace
-                              ? (widget.isDarkMode
-                                    ? Colors.greenAccent.shade200
-                                    : Colors.greenAccent.shade700)
-                              : (widget.isDarkMode
-                                    ? Colors.white70
-                                    : Colors.grey.shade500),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _isCheckingFace
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _hasRegisteredFace
-                              ? Colors.green.withOpacity(0.1)
-                              : Colors.orange.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _hasRegisteredFace
-                              ? AppLanguage.tr('active')
-                              : AppLanguage.tr('missing'),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: _hasRegisteredFace
-                                ? Colors.green
-                                : Colors.orange,
-                          ),
-                        ),
-                      ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: _navigateToFaceRegistration,
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF2563EB)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: Text(
-                  _hasRegisteredFace
-                      ? AppLanguage.tr('re_register_face')
-                      : AppLanguage.tr('register_now'),
-                  style: const TextStyle(color: Color(0xFF2563EB)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildAttendanceSettingsCard() {
     // AbsenKu mengunci mode presensi ke Face ID.
     return Padding(
@@ -1448,7 +1274,7 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text(
-                      'Active',
+                      'Aktif',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -1658,185 +1484,58 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
               ],
             ),
             const SizedBox(height: 16),
-            ValueListenableBuilder<String>(
-              valueListenable: LanguageHelper.languageNotifier,
-              builder: (context, currentLang, _) {
-                String langName = currentLang == LanguageHelper.indonesian
-                    ? 'Bahasa Indonesia'
-                    : (currentLang == LanguageHelper.english
-                          ? 'English'
-                          : 'العربية');
-                String flag = currentLang == LanguageHelper.indonesian
-                    ? '🇮🇩'
-                    : (currentLang == LanguageHelper.english ? '🇺🇸' : '🇸🇦');
-
-                return InkWell(
-                  onTap: _showLanguageBottomSheet,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              decoration: BoxDecoration(
+                color: widget.isDarkMode
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: widget.isDarkMode
+                      ? Colors.white12
+                      : Colors.grey.shade200,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Text('🇮🇩', style: TextStyle(fontSize: 20)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Bahasa Indonesia',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: widget.isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ),
+                  Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                      horizontal: 8,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: widget.isDarkMode
-                          ? Colors.white.withOpacity(0.05)
-                          : Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: widget.isDarkMode
-                            ? Colors.white12
-                            : Colors.grey.shade200,
+                      color: const Color(0xFF10B981).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Aktif',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF10B981),
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Text(flag, style: const TextStyle(fontSize: 20)),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            langName,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: widget.isDarkMode
-                                  ? Colors.white
-                                  : Colors.black87,
-                            ),
-                          ),
-                        ),
-                        const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          color: Colors.grey,
-                        ),
-                      ],
-                    ),
                   ),
-                );
-              },
+                ],
+              ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  void _showLanguageBottomSheet() async {
-    final currentLang = LanguageHelper.languageNotifier.value;
-
-    final result = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => _buildModernSelectMenu(
-        title: AppLanguage.tr('language_settings'),
-        options: [
-          _buildLanguageSelectOption(
-            code: LanguageHelper.indonesian,
-            title: 'Bahasa Indonesia',
-            subtitle: 'Indonesian',
-            isSelected: currentLang == LanguageHelper.indonesian,
-          ),
-          _buildLanguageSelectOption(
-            code: LanguageHelper.english,
-            title: 'English',
-            subtitle: 'International',
-            isSelected: currentLang == LanguageHelper.english,
-          ),
-          _buildLanguageSelectOption(
-            code: LanguageHelper.arabic,
-            title: 'العربية',
-            subtitle: 'Arabic',
-            isSelected: currentLang == LanguageHelper.arabic,
-          ),
-        ],
-      ),
-    );
-
-    if (result != null) {
-      await AppLanguage.setLanguage(result);
-    }
-  }
-
-  Widget _buildLanguageSelectOption({
-    required String code,
-    required String title,
-    required String subtitle,
-    required bool isSelected,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () => Navigator.pop(context, code),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? const Color(0xFF2563EB).withOpacity(0.1)
-                : (widget.isDarkMode
-                      ? Colors.white.withOpacity(0.05)
-                      : Colors.grey.shade50),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isSelected ? const Color(0xFF2563EB) : Colors.transparent,
-              width: 1.5,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: widget.isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.grey.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    code == 'id' ? '🇮🇩' : (code == 'en' ? '🇺🇸' : '🇸🇦'),
-                    style: const TextStyle(fontSize: 24),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: widget.isDarkMode
-                            ? Colors.white
-                            : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: widget.isDarkMode
-                            ? Colors.white60
-                            : Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (isSelected)
-                const Icon(
-                  Icons.check_circle_rounded,
-                  color: Color(0xFF2563EB),
-                  size: 24,
-                ),
-            ],
-          ),
         ),
       ),
     );

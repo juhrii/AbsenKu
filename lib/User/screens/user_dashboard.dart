@@ -1338,7 +1338,7 @@ class _UserDashboardPageState extends State<UserDashboardPage>
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          '$currentTime ${isAmPm ? AppLanguage.tr('am') : AppLanguage.tr('pm')}',
+                                          currentTime,
                                           style: TextStyle(
                                             fontSize: 28,
                                             fontWeight: FontWeight.bold,
@@ -2744,7 +2744,13 @@ class _UserDashboardPageState extends State<UserDashboardPage>
               ),
             ),
             child: Text(
-              event['status'].toString().toUpperCase(),
+              switch (event['status'].toString().toLowerCase()) {
+                'present' => 'HADIR',
+                'late' => 'TERLAMBAT',
+                'absent' => 'ABSEN',
+                'pending' => 'MENUNGGU',
+                _ => event['status'].toString().toUpperCase(),
+              },
               style: TextStyle(
                 fontSize: 9,
                 color: _getStatusColor(event['status']),
