@@ -64,7 +64,7 @@ Future<void> main() async {
   // ✅ INITIALIZE OBJECTBOX (Fastest DB)
   objectBox = await ObjectBoxService.create();
 
-  // HAPUS DATABASE LAMA SEBELUM APLIKASI JALAN
+  // HAPUS DATABASE LAMA SEBELUM APLIKASI JALAN m
   await forceDeleteDatabase();
 
   // Backend API atau bisa juga inisialisasi supobase
