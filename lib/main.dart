@@ -69,8 +69,8 @@ Future<void> main() async {
 
   // Backend API atau bisa juga inisialisasi supobase
   await Supabase.initialize(
-    url: 'https://yjmjyqewlemqzmwjrfqk.supabase.co',
-    anonKey: 'sb_publishable_i_xmrVVgZBXvE-IxgLN6-g_rSG8vGWY',
+    url: 'https://wrmdpxkvmsinfvrghxgu.supabase.co',
+    anonKey: 'sb_publishable_Cj2gX7DNJ4x64ZvKTFwMnA_fQSlHKF7',
   );
   await AppLanguage.init();
   await initializeDateFormatting('id_ID', null);
