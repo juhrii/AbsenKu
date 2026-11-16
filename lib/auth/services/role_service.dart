@@ -4,6 +4,26 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class RoleService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  static final Map<String, List<Map<String, dynamic>>> _membershipsCache = {};
+  static final Map<String, Future<List<Map<String, dynamic>>>>
+  _inFlightRequests = {};
+
+  /// Clear cached memberships (call on logout or after joining a new org).
+  static void clearCache([String? userId]) {
+    if (userId == null) {
+      _membershipsCache.clear();
+      _inFlightRequests.clear();
+    } else {
+      _membershipsCache.remove(userId);
+      _inFlightRequests.remove(userId);
+    }
+  }
+
+  /// Synchronously return cached memberships if already fetched.
+  List<Map<String, dynamic>>? getCachedMemberships(String userId) {
+    return _membershipsCache[userId];
+  }
+
   /// Get organization member with role information
   Future<Map<String, dynamic>?> getOrganizationMemberWithRole(
     String userId,
@@ -141,8 +161,29 @@ class RoleService {
     }
   }
 
-  /// Get ALL organization memberships for a user
+  /// Get ALL organization memberships for a user (cached in memory for instant switching)
   Future<List<Map<String, dynamic>>> getAllOrganizationMembersWithRoles(
+    String userId, {
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh) {
+      final cached = _membershipsCache[userId];
+      if (cached != null) {
+        return cached;
+      }
+    }
+
+    final inFlight = _inFlightRequests[userId];
+    if (inFlight != null && !forceRefresh) {
+      return inFlight;
+    }
+
+    final future = _fetchAndCacheMemberships(userId);
+    _inFlightRequests[userId] = future;
+    return future;
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchAndCacheMemberships(
     String userId,
   ) async {
     try {
@@ -159,7 +200,8 @@ class RoleService {
               id,
               name,
               logo_url,
-              address
+              address,
+              timezone
             ),
             system_roles!organization_members_role_id_fkey (
               id,
@@ -179,12 +221,14 @@ class RoleService {
           .eq('user_id', userId)
           .eq('is_active', true);
 
-      debugPrint('RAW MEMBERSHIPS RESPONSE: $response');
-
-      return List<Map<String, dynamic>>.from(response);
+      final list = List<Map<String, dynamic>>.from(response);
+      _membershipsCache[userId] = list;
+      return list;
     } catch (e) {
       debugPrint('!!! ERROR fetching all organization memberships: $e');
-      return [];
+      return _membershipsCache[userId] ?? <Map<String, dynamic>>[];
+    } finally {
+      _inFlightRequests.remove(userId);
     }
   }
 }

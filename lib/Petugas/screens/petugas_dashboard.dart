@@ -61,6 +61,7 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
   // Real-time updates
   Timer? _clockTimer;
   StreamSubscription? _activitySubscription;
+  bool _isFirstActivityStreamEvent = true;
   DateTime _nowUtc = DateTime.now().toUtc();
 
   @override
@@ -72,27 +73,22 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
     _userProfile = widget.userProfile;
     _isDarkMode = widget.isDarkMode;
 
-    // Log memberships for debugging
-    final userId = _supabase.auth.currentUser?.id;
-    if (userId != null) {
-      _roleService.getAllOrganizationMembersWithRoles(userId).then((list) {
-        debugPrint(
-          '🕵️ DEBUG: User has ${list.length} organization memberships.',
-        );
-        for (var m in list) {
-          debugPrint(
-            '  - Org: ${m['organizations']?['name']}, Role: ${m['system_roles']?['name']}',
-          );
-        }
-      });
+    final initialOrg = widget.memberData['organizations'];
+    if (initialOrg is Map<String, dynamic>) {
+      _organization = initialOrg;
+      final tz = initialOrg['timezone'] as String?;
+      if (tz != null && tz.isNotEmpty) {
+        _organizationTimezone = tz;
+      }
     }
 
-    _loadUserProfile();
-    _loadOrganizationTimezone();
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId != null && _roleService.getCachedMemberships(userId) == null) {
+      _roleService.getAllOrganizationMembersWithRoles(userId);
+    }
+
     _loadOrganizationInfo();
-    _checkFaceRegistration();
     _refreshAll();
-    _loadWeeklyOverview();
     _initRealTimeClock();
     _initActivityStream();
   }
@@ -122,6 +118,10 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
           .order('event_time')
           .listen(
             (data) {
+              if (_isFirstActivityStreamEvent) {
+                _isFirstActivityStreamEvent = false;
+                return;
+              }
               debugPrint('📡 Real-time update detected in attendance_logs');
               _refreshAll();
             },
@@ -178,39 +178,20 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
     try {
       final org = await _supabase
           .from('organizations')
-          .select('id, name, logo_url')
+          .select('id, name, logo_url, timezone')
           .eq('id', organizationId)
           .maybeSingle();
 
-      if (org != null) {
+      if (mounted && org != null) {
         setState(() {
           _organization = org;
+          if (org['timezone'] != null) {
+            _organizationTimezone = org['timezone'] as String;
+          }
         });
       }
     } catch (e) {
       debugPrint('Error loading organization info for ID $organizationId: $e');
-    }
-  }
-
-  Future<void> _loadOrganizationTimezone() async {
-    final organizationId = widget.memberData['organization_id'] as int?;
-    if (organizationId == null) return;
-
-    try {
-      final org = await _supabase
-          .from('organizations')
-          .select('timezone')
-          .eq('id', organizationId)
-          .maybeSingle();
-
-      if (org != null && org['timezone'] != null) {
-        setState(() {
-          _organizationTimezone = org['timezone'] as String;
-        });
-        debugPrint('Organization timezone: $_organizationTimezone');
-      }
-    } catch (e) {
-      debugPrint('Error loading organization timezone: $e');
     }
   }
 
@@ -691,11 +672,15 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
           ),
           const SizedBox(height: 16),
           FutureBuilder<List<Map<String, dynamic>>>(
+            initialData: _roleService.getCachedMemberships(
+              _supabase.auth.currentUser!.id,
+            ),
             future: _roleService.getAllOrganizationMembersWithRoles(
               _supabase.auth.currentUser!.id,
             ),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (!snapshot.hasData &&
+                  snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(20),

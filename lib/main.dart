@@ -69,8 +69,8 @@ Future<void> main() async {
 
   // Backend API atau bisa juga inisialisasi supobase
   await Supabase.initialize(
-    url: 'https://wrmdpxkvmsinfvrghxgu.supabase.co',
-    anonKey: 'sb_publishable_Cj2gX7DNJ4x64ZvKTFwMnA_fQSlHKF7',
+    url: 'https://wfyijokzozgzbygnlijj.supabase.co',
+    anonKey: 'sb_publishable_78QtlrW-ofScaiM66R37Lw_H1jGhTJi',
   );
   await AppLanguage.init();
   await initializeDateFormatting('id_ID', null);
@@ -256,9 +256,10 @@ class _SplashScreenState extends State<SplashScreen>
       final userId = session.user.id;
       debugPrint('✅ Active session found for user: $userId');
 
-      // Fetch ALL memberships
+      // Fetch ALL memberships fresh on startup and warm cache
       final memberships = await _roleService.getAllOrganizationMembersWithRoles(
         userId,
+        forceRefresh: true,
       );
 
       if (!mounted) return;
@@ -384,9 +385,7 @@ class _SplashScreenState extends State<SplashScreen>
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(30),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.25),
-                      ),
+                      border: Border.all(color: Colors.white.withOpacity(0.25)),
                     ),
                     child: Text(
                       'PLATFORM ABSENSI SEKOLAH',

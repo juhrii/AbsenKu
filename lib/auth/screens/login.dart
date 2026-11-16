@@ -165,7 +165,10 @@ class _ModernLoginScreenState extends State<ModernLoginScreen> {
     String userId,
   ) async {
     try {
-      return await _roleService.getAllOrganizationMembersWithRoles(userId);
+      return await _roleService.getAllOrganizationMembersWithRoles(
+        userId,
+        forceRefresh: true,
+      );
     } catch (e) {
       debugPrint('Error checking user organizations: $e');
       return [];

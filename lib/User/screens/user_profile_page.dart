@@ -392,6 +392,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
           ),
           TextButton(
             onPressed: () async {
+              RoleService.clearCache();
               await _supabase.auth.signOut();
               if (dialogContext.mounted) {
                 Navigator.of(dialogContext).pushAndRemoveUntil(
