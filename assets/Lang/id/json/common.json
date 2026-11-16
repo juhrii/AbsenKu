@@ -28,7 +28,7 @@
     "organization_id_not_found": "ID Organisasi tidak ditemukan",
     "error": "Kesalahan",
     "fingerprint_coming_soon": "Presensi sidik jari akan segera hadir!",
-    "login_success": "Login berhasil! User sudah punya organisasi.",
+    "login_success": "Berhasil masuk! Pengguna sudah punya organisasi.",
     "signup_success_title": "Pendaftaran Berhasil",
     "signup_success_message": "Akun Anda telah berhasil dibuat.\nSilakan masuk untuk melanjutkan.",
     "continue_to_login": "Lanjut Masuk",

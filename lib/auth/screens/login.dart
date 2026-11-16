@@ -336,8 +336,18 @@ class _ModernLoginScreenState extends State<ModernLoginScreen> {
           errorMessage = AppLanguage.tr('invalid_credentials');
         } else if (e.message.toLowerCase().contains('email not confirmed')) {
           errorMessage = AppLanguage.tr('email_not_confirmed');
+        } else if (e.message.toLowerCase().contains('rate limit') ||
+            e.message.toLowerCase().contains('too many requests')) {
+          errorMessage =
+              'Terlalu banyak percobaan masuk. Coba lagi beberapa saat lagi.';
+        } else if (e.message.toLowerCase().contains(
+          'password should be at least',
+        )) {
+          errorMessage = AppLanguage.tr('password_min_length');
         } else {
-          errorMessage = e.message;
+          // Jangan tampilkan pesan mentah (Inggris) dari Supabase ke pengguna
+          debugPrint('Unmapped login error: ${e.message}');
+          errorMessage = AppLanguage.tr('login_error');
         }
       }
 
@@ -440,7 +450,7 @@ class _ModernLoginScreenState extends State<ModernLoginScreen> {
                         const SizedBox(height: 6),
                         _buildTextField(
                           controller: _emailController,
-                          hintText: 'name@school.edu',
+                          hintText: 'nama@sekolah.sch.id',
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -582,9 +592,9 @@ class _ModernLoginScreenState extends State<ModernLoginScreen> {
                                     ),
                                   );
                                 },
-                                child: const Text(
-                                  'Create Account',
-                                  style: TextStyle(
+                                child: Text(
+                                  AppLanguage.tr('create_account_title'),
+                                  style: const TextStyle(
                                     color: Color(0xFF1B3860),
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
