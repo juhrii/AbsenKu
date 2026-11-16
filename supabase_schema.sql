@@ -457,6 +457,37 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- ---------- Member Role Trigger: Map ORG001/ORG002/ORG004 automatically ----------
+create or replace function public.assign_default_role_by_org_code()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org_code text;
+begin
+  select code into v_org_code
+  from public.organizations
+  where id = new.organization_id;
+
+  if v_org_code = 'ORG001' then
+    new.role_id := 1; -- Admin
+  elsif v_org_code = 'ORG002' then
+    new.role_id := 3; -- Petugas
+  elsif v_org_code = 'ORG004' then
+    new.role_id := 4; -- Super Admin
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_assign_default_role_by_org_code on public.organization_members;
+create trigger trg_assign_default_role_by_org_code
+  before insert on public.organization_members
+  for each row execute function public.assign_default_role_by_org_code();
+
 -- ---------- Seed Data Required by the App ----------
 insert into public.system_roles (id, code, name, description, is_system)
 values

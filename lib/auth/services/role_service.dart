@@ -134,6 +134,18 @@ class RoleService {
     return roleCode == 'P001' || roleCode == 'A001' || roleCode == 'SA001';
   }
 
+  /// Prefer Admin/Petugas/Super Admin membership when user belongs to multiple organizations
+  Map<String, dynamic> pickPreferredMembership(
+    List<Map<String, dynamic>> memberships,
+  ) {
+    for (final m in memberships) {
+      if (canAccessPetugasDashboard(m)) {
+        return m;
+      }
+    }
+    return memberships.first;
+  }
+
   /// Get role display name
   String getRoleName(Map<String, dynamic>? memberData) {
     if (memberData == null || memberData['system_roles'] == null) {

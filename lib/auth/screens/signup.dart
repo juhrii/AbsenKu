@@ -48,60 +48,41 @@ class _ModernSignupScreenState extends State<ModernSignupScreen> {
     }
   }
 
-  Future<bool> _createUserProfile(
-    String userId,
-    String fullName,
-    String email,
-  ) async {
+  Future<void> _ensureDefaultOrganization(String userId) async {
     try {
-      debugPrint('Creating user profile for: $userId');
-
-      final nameParts = _splitName(fullName);
-      final firstName = nameParts['first_name']!;
-      final lastName = nameParts['last_name']!;
-
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      final existingProfile = await supabase
-          .from('user_profiles')
-          .select('id, email')
-          .eq('id', userId)
-          .maybeSingle();
-
-      if (existingProfile != null) {
-        debugPrint('Updating existing profile created by trigger...');
-        await supabase
-            .from('user_profiles')
-            .update({
-              'first_name': firstName,
-              'last_name': lastName,
-              'display_name': fullName,
-              'email': email,
-              'is_active': true,
-            })
-            .eq('id', userId);
-      } else {
-        debugPrint('Creating new user profile...');
-        await supabase.from('user_profiles').insert({
-          'id': userId,
-          'first_name': firstName,
-          'last_name': lastName,
-          'display_name': fullName,
-          'email': email,
-          'is_active': true,
-        });
-      }
-
-      // ✅ AUTOMATICALLY JOIN ORGANIZATION 3 (Testing Mode)
-      debugPrint('Automatically adding user to Org 3...');
       await supabase.from('organization_members').upsert({
         'organization_id': 3,
         'user_id': userId,
         'role_id': 2, // Role 2 = User
         'is_active': true,
       }, onConflict: 'organization_id, user_id');
+    } catch (e) {
+      debugPrint('Optional org_3 upsert skipped: $e');
+    }
+  }
 
-      debugPrint('User profile and membership created successfully.');
+  Future<bool> _createUserProfile(
+    String userId,
+    String fullName,
+    String email,
+  ) async {
+    try {
+      final nameParts = _splitName(fullName);
+      final firstName = nameParts['first_name']!;
+      final lastName = nameParts['last_name']!;
+
+      await Future.wait<void>([
+        supabase.from('user_profiles').upsert({
+          'id': userId,
+          'first_name': firstName,
+          'last_name': lastName,
+          'display_name': fullName,
+          'email': email,
+          'is_active': true,
+        }),
+        _ensureDefaultOrganization(userId),
+      ]);
+
       return true;
     } catch (e) {
       debugPrint('Error creating user profile/membership: $e');
@@ -166,20 +147,22 @@ class _ModernSignupScreenState extends State<ModernSignupScreen> {
       final AuthResponse res = await supabase.auth.signUp(
         email: email,
         password: password,
-        data: {'name': name, 'display_name': name},
+        data: {'full_name': name, 'name': name, 'display_name': name},
       );
 
       if (res.user != null) {
         debugPrint('Signup successful, user ID: ${res.user!.id}');
 
-        final profileSuccess = await _createUserProfile(
-          res.user!.id,
-          name,
-          email,
-        );
+        if (res.session != null) {
+          final profileSuccess = await _createUserProfile(
+            res.user!.id,
+            name,
+            email,
+          );
 
-        if (!profileSuccess) {
-          debugPrint('Warning: Failed to create user profile');
+          if (!profileSuccess) {
+            debugPrint('Warning: Failed to create user profile');
+          }
         }
 
         if (!mounted) return;

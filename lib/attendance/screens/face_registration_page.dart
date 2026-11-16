@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:image/image.dart' as img;
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import '../services/face_recognition_tflite_service.dart';
@@ -57,7 +58,10 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
   // Multi-Angle Registration Logic
   CaptureAngle _currentAngle = CaptureAngle.front;
   final Map<CaptureAngle, Map<String, dynamic>> _capturedTemplates = {};
-  String? _frontImagePath;
+  Uint8List? _frontFrameBytes;
+  int _frontFrameWidth = 0;
+  int _frontFrameHeight = 0;
+  int _frontFrameRotation = 0;
 
   // Guidance and UI
   List<Map<String, dynamic>> _painterFaces = [];
@@ -543,6 +547,10 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
       _capturedTemplates[_currentAngle] = faceTemplate;
 
       if (_currentAngle == CaptureAngle.front) {
+        _frontFrameBytes = frameBytes;
+        _frontFrameWidth = width;
+        _frontFrameHeight = height;
+        _frontFrameRotation = rotation;
         await Future.delayed(const Duration(milliseconds: 300));
         if (!mounted) return;
         _currentAngle = CaptureAngle.left;
@@ -620,10 +628,13 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
         'enrollmentDate': DateTime.now().toIso8601String(),
       };
 
-      if (_frontImagePath != null) {
-        final frontPath = _frontImagePath!;
-        _frontImagePath = null;
-        unawaited(_uploadFrontTemplateInBackground(frontPath));
+      if (_frontFrameBytes != null) {
+        final bytes = _frontFrameBytes!;
+        final w = _frontFrameWidth;
+        final h = _frontFrameHeight;
+        final rot = _frontFrameRotation;
+        _frontFrameBytes = null;
+        unawaited(_uploadFrontBytesInBackground(bytes, w, h, rot));
       }
 
       await _biometricService.registerFaceTemplate(
@@ -706,16 +717,31 @@ class _FaceRegistrationPageState extends State<FaceRegistrationPage>
     });
   }
 
-  Future<void> _uploadFrontTemplateInBackground(String frontPath) async {
+  Future<void> _uploadFrontBytesInBackground(
+    Uint8List frameBytes,
+    int width,
+    int height,
+    int rotation,
+  ) async {
     try {
-      final imageFile = File(frontPath);
-      if (!await imageFile.exists()) return;
+      final jpgBytes = await compute(_encodeNv21FrameToJpgCompute, {
+        'bytes': frameBytes,
+        'width': width,
+        'height': height,
+        'rotation': rotation,
+      });
+      final tempDir = await Directory.systemTemp.createTemp();
+      final tempFile = File('${tempDir.path}/face_front.jpg');
+      await tempFile.writeAsBytes(jpgBytes);
       await _storageService.uploadFaceTemplate(
-        imageFile,
+        tempFile,
         widget.organizationMemberId,
       );
-      if (await imageFile.exists()) {
-        await imageFile.delete();
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+      if (await tempDir.exists()) {
+        await tempDir.delete();
       }
     } catch (e) {
       debugPrint('Background template upload skipped: $e');
@@ -1587,4 +1613,56 @@ Uint8List _yuv420ToNv21Compute(_NV21ConvertParams params) {
     }
   }
   return nv21;
+}
+
+Uint8List _encodeNv21FrameToJpgCompute(Map<String, dynamic> params) {
+  final Uint8List bytes = params['bytes'] as Uint8List;
+  final int width = params['width'] as int;
+  final int height = params['height'] as int;
+  final int rotation = params['rotation'] as int;
+
+  img.Image rgbImage;
+  final int ySize = width * height;
+
+  if (bytes.length >= ySize * 4) {
+    rgbImage = img.Image.fromBytes(
+      width: width,
+      height: height,
+      bytes: bytes.buffer,
+      order: img.ChannelOrder.bgra,
+    );
+  } else {
+    rgbImage = img.Image(width: width, height: height);
+    for (int y = 0; y < height; y++) {
+      final int yRow = y * width;
+      final int uvRow = ySize + (y >> 1) * width;
+      for (int x = 0; x < width; x++) {
+        final int yVal = bytes[yRow + x];
+        final int uvIdx = uvRow + (x & ~1);
+        final int vVal = uvIdx < bytes.length ? bytes[uvIdx] : 128;
+        final int uVal = uvIdx + 1 < bytes.length ? bytes[uvIdx + 1] : 128;
+
+        final int r8 = vVal - 128;
+        final int u8 = uVal - 128;
+        int r = yVal + ((1403 * r8) >> 10);
+        int g = yVal - ((346 * u8 + 715 * r8) >> 10);
+        int b = yVal + ((1774 * u8) >> 10);
+
+        r = r < 0 ? 0 : (r > 255 ? 255 : r);
+        g = g < 0 ? 0 : (g > 255 ? 255 : g);
+        b = b < 0 ? 0 : (b > 255 ? 255 : b);
+        rgbImage.setPixelRgb(x, y, r, g, b);
+      }
+    }
+  }
+
+  if (rotation == 90) {
+    rgbImage = img.copyRotate(rgbImage, angle: 90);
+  } else if (rotation == 180) {
+    rgbImage = img.copyRotate(rgbImage, angle: 180);
+  } else if (rotation == 270) {
+    rgbImage = img.copyRotate(rgbImage, angle: 270);
+  }
+
+  return Uint8List.fromList(img.encodeJpg(rgbImage, quality: 85));
 }

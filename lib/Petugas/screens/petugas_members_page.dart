@@ -1112,6 +1112,7 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
     return Container(
       color: widget.isDarkMode ? const Color(0xFF0B132B) : Colors.grey.shade50,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSummaryCard(),
           Expanded(child: _buildMembersList()),
@@ -1139,6 +1140,7 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1497,12 +1499,12 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
     required VoidCallback? onPressed,
     bool isRightIcon = false,
   }) {
-    return SizedBox(
-      width: 65,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 74),
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           minimumSize: Size.zero,
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),

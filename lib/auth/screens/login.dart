@@ -241,9 +241,8 @@ class _ModernLoginScreenState extends State<ModernLoginScreen> {
         debugPrint('✓ User has ${memberships.length} organizations');
         _showSnackBar(AppLanguage.tr('login_success'), true);
 
-        // Always pick the first membership and navigate to dashboard
-        // SKIP: OrganizationSelectionPage
-        final memberData = memberships.first;
+        // Pick preferred membership (Admin/Petugas if joined) and navigate to dashboard
+        final memberData = _roleService.pickPreferredMembership(memberships);
         _navigateToDashboard(memberData);
       } else {
         debugPrint(

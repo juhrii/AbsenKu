@@ -273,8 +273,8 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         );
       } else {
-        // If 1 or more memberships, pick the first one and go to dashboard
-        final memberData = memberships.first;
+        // Pick preferred membership (Admin/Petugas if joined) and go to dashboard
+        final memberData = _roleService.pickPreferredMembership(memberships);
         _navigateToDashboard(memberData);
       }
     } catch (e) {
@@ -337,25 +337,11 @@ class _SplashScreenState extends State<SplashScreen>
           opacity: _fadeAnimation,
           child: ScaleTransition(
             scale: _scaleAnimation,
-            child: Container(
-              width: 140,
-              height: 140,
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(32),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.25),
-                    blurRadius: 30,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: Image.asset(
-                'assets/logo/app_icon_splash.png',
-                fit: BoxFit.cover,
-              ),
+            child: Image.asset(
+              'assets/logo/app_icon_splash.png',
+              width: 150,
+              height: 150,
+              fit: BoxFit.contain,
             ),
           ),
         ),
