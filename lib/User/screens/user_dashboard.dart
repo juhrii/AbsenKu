@@ -1,5 +1,6 @@
 import 'package:absenku/attendance/screens/face_registration_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -1266,6 +1267,18 @@ class _UserDashboardPageState extends State<UserDashboardPage>
     );
   }
 
+  // Status bar transparan dengan ikon terang karena header selalu bernuansa navy.
+  Widget _withLightStatusBar(Widget child) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light, // Android
+        statusBarBrightness: Brightness.dark, // iOS
+      ),
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final displayTime = _currentOrgTime ?? DateTime.now();
@@ -1274,7 +1287,7 @@ class _UserDashboardPageState extends State<UserDashboardPage>
     final currentTime = '$hourFormat:$minuteFormat';
     final isAmPm = displayTime.hour < 12;
 
-    return Scaffold(
+    return _withLightStatusBar(Scaffold(
       backgroundColor: _isDarkMode
           ? const Color(0xFF0B132B)
           : const Color(0xFFF5F5F5),
@@ -1698,7 +1711,7 @@ class _UserDashboardPageState extends State<UserDashboardPage>
           }
         },
       ),
-    );
+    ));
   }
 
   Widget _buildFaceRegistrationCard() {

@@ -15,6 +15,7 @@ import '../../User/screens/user_dashboard.dart'; // ✅ Added for organization s
 import '../../auth/screens/join_organization_screen.dart'; // ✅ Added for Join Organization option
 import '../../helpers/language_helper.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class PetugasDashboardPage extends StatefulWidget {
@@ -1007,6 +1008,18 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
     return '$hour:$minute';
   }
 
+  // Status bar transparan dengan ikon terang karena header selalu bernuansa navy.
+  Widget _withLightStatusBar(Widget child) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light, // Android
+        statusBarBrightness: Brightness.dark, // iOS
+      ),
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final nowOrg = TimezoneHelper.convertUtcToOrgTimezone(
@@ -1017,7 +1030,7 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
     final minute = nowOrg.minute.toString().padLeft(2, '0');
     final currentTime = '$hour:$minute';
 
-    return Scaffold(
+    return _withLightStatusBar(Scaffold(
       backgroundColor: _isDarkMode
           ? const Color(0xFF0B132B)
           : const Color(0xFFF5F5F5),
@@ -1669,7 +1682,7 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
         isDarkMode: _isDarkMode,
         attendanceMode: _attendanceMode,
       ),
-    );
+    ));
   }
 
   Widget _buildTimeCard(String currentTime, DateTime nowOrg) {
