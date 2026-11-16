@@ -184,7 +184,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Timezone diubah ke $display'),
+            content: Text('Zona waktu diubah ke $display'),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 2),
           ),
@@ -195,7 +195,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal menyimpan timezone: $e'),
+            content: Text('Gagal menyimpan zona waktu: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -569,7 +569,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          _organization?['name'] ?? 'Loading...',
+                          _organization?['name'] ?? 'Memuat...',
                           style: TextStyle(
                             fontSize: 14,
                             color: widget.isDarkMode

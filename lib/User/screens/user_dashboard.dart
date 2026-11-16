@@ -887,7 +887,7 @@ class _UserDashboardPageState extends State<UserDashboardPage>
   }
 
   String _getFullName() {
-    if (_userProfile == null) return 'Loading...';
+    if (_userProfile == null) return 'Memuat...';
     final firstName = _userProfile!['first_name'] ?? '';
     final middleName = _userProfile!['middle_name'] ?? '';
     final lastName = _userProfile!['last_name'] ?? '';
@@ -1296,7 +1296,12 @@ class _UserDashboardPageState extends State<UserDashboardPage>
               // HEADER SECTION
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(8, 8, 12, 36),
+                padding: EdgeInsets.fromLTRB(
+                  8,
+                  MediaQuery.of(context).padding.top + 12,
+                  12,
+                  36,
+                ),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: _isDarkMode

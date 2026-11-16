@@ -26,12 +26,12 @@ class LanguageHelper {
   // Global map to store all translations loaded from JSON files
   static Map<String, dynamic> _localizedValues = {};
 
-  // Get saved language and load translations
+  // Get saved language and load translations (always enforce Indonesian)
   static Future<String> getSavedLanguage() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedLang = prefs.getString(_languageKey);
+    await prefs.setString(_languageKey, indonesian);
 
-    _currentLanguage = savedLang ?? defaultLanguage;
+    _currentLanguage = indonesian;
     languageNotifier.value = _currentLanguage;
 
     await loadTranslations(_currentLanguage);
@@ -76,14 +76,14 @@ class LanguageHelper {
     }
   }
 
-  // Save language and reload translations
+  // Save language and reload translations (locked to Indonesian)
   static Future<void> saveLanguage(String languageCode) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_languageKey, languageCode);
-    _currentLanguage = languageCode;
-    languageNotifier.value = languageCode;
+    await prefs.setString(_languageKey, indonesian);
+    _currentLanguage = indonesian;
+    languageNotifier.value = indonesian;
 
-    await loadTranslations(languageCode);
+    await loadTranslations(indonesian);
   }
 
   // Get translation by key (format: "filename.key" or "folder.filename.key")

@@ -516,13 +516,13 @@ class _ManualCheckPageState extends State<ManualCheckPage> {
                     const SizedBox(height: 24),
                   ],
 
-                  _buildSectionTitle('Attendance Type', textColor),
+                  _buildSectionTitle('Jenis Kehadiran', textColor),
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
                         child: _buildTypeCard(
-                          'Check In',
+                          'Masuk',
                           'check_in',
                           Icons.login_rounded,
                           isDark,
@@ -531,7 +531,7 @@ class _ManualCheckPageState extends State<ManualCheckPage> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: _buildTypeCard(
-                          'Check Out',
+                          'Keluar',
                           'check_out',
                           Icons.logout_rounded,
                           isDark,
@@ -541,7 +541,7 @@ class _ManualCheckPageState extends State<ManualCheckPage> {
                   ),
 
                   const SizedBox(height: 24),
-                  _buildSectionTitle('Date & Time', textColor),
+                  _buildSectionTitle('Tanggal & Waktu', textColor),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -566,21 +566,21 @@ class _ManualCheckPageState extends State<ManualCheckPage> {
                   ),
 
                   const SizedBox(height: 24),
-                  _buildSectionTitle('Location', textColor, isOptional: true),
+                  _buildSectionTitle('Lokasi', textColor, isOptional: true),
                   const SizedBox(height: 12),
                   _buildTextField(
                     _locationController,
-                    'Enter location',
+                    'Masukkan lokasi',
                     Icons.location_on_outlined,
                     isDark,
                   ),
 
                   const SizedBox(height: 24),
-                  _buildSectionTitle('Notes', textColor, isOptional: true),
+                  _buildSectionTitle('Catatan', textColor, isOptional: true),
                   const SizedBox(height: 12),
                   _buildTextField(
                     _notesController,
-                    'Add any notes or remarks',
+                    'Tambahkan catatan atau keterangan',
                     Icons.notes_rounded,
                     isDark,
                     maxLines: 4,
@@ -613,7 +613,7 @@ class _ManualCheckPageState extends State<ManualCheckPage> {
         ),
         if (isOptional)
           Text(
-            '(Optional)',
+            '(Opsional)',
             style: TextStyle(color: color.withValues(alpha: 0.5), fontSize: 12),
           ),
       ],

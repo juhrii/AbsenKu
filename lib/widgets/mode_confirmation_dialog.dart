@@ -18,7 +18,7 @@ class ModeConfirmationDialog extends StatelessWidget {
     final isCheckIn = newMode == 'check_in';
     final color = isCheckIn ? Colors.green : Colors.red;
     final icon = isCheckIn ? Icons.login : Icons.logout;
-    final label = isCheckIn ? 'Check In' : 'Check Out';
+    final label = isCheckIn ? 'Masuk' : 'Keluar';
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

@@ -321,7 +321,7 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Profile photo updated successfully'),
+            content: Text('Foto profil berhasil diperbarui'),
             backgroundColor: Colors.green,
           ),
         );
@@ -331,7 +331,7 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to upload photo: $e'),
+            content: Text('Gagal mengunggah foto: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -403,7 +403,7 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Profile updated successfully'),
+            content: Text('Profil berhasil diperbarui'),
             backgroundColor: Colors.green,
           ),
         );
@@ -413,7 +413,7 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update profile: $e'),
+            content: Text('Gagal memperbarui profil: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -470,12 +470,12 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        title: const Text('Keluar'),
+        content: const Text('Apakah Anda yakin ingin keluar?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('Batal'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -483,7 +483,7 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Logout'),
+            child: const Text('Keluar'),
           ),
         ],
       ),
@@ -504,7 +504,7 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Logout failed: $e'),
+              content: Text('Gagal keluar: $e'),
               backgroundColor: Colors.red,
             ),
           );
@@ -514,7 +514,7 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
   }
 
   String _getFullName() {
-    if (_userProfile == null) return 'Loading...';
+    if (_userProfile == null) return 'Memuat...';
     final firstName = _userProfile!['first_name'] ?? '';
     final middleName = _userProfile!['middle_name'] ?? '';
     final lastName = _userProfile!['last_name'] ?? '';
@@ -675,7 +675,7 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
                               child: ElevatedButton.icon(
                                 onPressed: _handleLogout,
                                 icon: const Icon(Icons.logout),
-                                label: const Text('Logout'),
+                                label: const Text('Keluar'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: widget.isDarkMode
                                       ? Colors.red.withOpacity(0.15)
@@ -747,7 +747,7 @@ class _PetugasProfilePageState extends State<PetugasProfilePage> {
   Widget _buildProfileSection() {
     final photoUrl = _getProfilePhotoUrl();
     final userEmail = _supabase.auth.currentUser?.email ?? 'No email';
-    final location = _organization?['name'] ?? 'Loading organization...';
+    final location = _organization?['name'] ?? 'Memuat organisasi...';
 
     return Container(
       padding: const EdgeInsets.only(top: 32),

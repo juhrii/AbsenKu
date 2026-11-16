@@ -137,10 +137,10 @@ class RoleService {
   /// Get role display name
   String getRoleName(Map<String, dynamic>? memberData) {
     if (memberData == null || memberData['system_roles'] == null) {
-      return 'Unknown';
+      return 'Tidak Diketahui';
     }
 
-    return memberData['system_roles']['name'] as String? ?? 'Unknown';
+    return memberData['system_roles']['name'] as String? ?? 'Tidak Diketahui';
   }
 
   /// Get role code

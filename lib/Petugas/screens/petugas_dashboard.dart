@@ -1030,7 +1030,12 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
               // HEADER WITH PROFILE
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(8, 8, 12, 36),
+                padding: EdgeInsets.fromLTRB(
+                  8,
+                  MediaQuery.of(context).padding.top + 12,
+                  12,
+                  36,
+                ),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: _isDarkMode
@@ -2355,7 +2360,7 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Check In',
+                        'Masuk',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
@@ -2391,7 +2396,7 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Check Out',
+                        'Keluar',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,

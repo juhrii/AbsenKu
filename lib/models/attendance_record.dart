@@ -188,7 +188,7 @@ class AttendanceRecord {
   bool get isComplete => hasCheckedIn && hasCheckedOut;
 
   String get statusDisplay {
-    if (status == null) return 'Unknown';
+    if (status == null) return 'Tidak Diketahui';
     return status!.replaceAll('_', ' ').toUpperCase();
   }
 

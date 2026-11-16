@@ -1,6 +1,6 @@
 {
-    "dashboard_title": "Dashboard Petugas",
-    "total_members": "Total Member",
+    "dashboard_title": "Beranda Petugas",
+    "total_members": "Total Anggota",
     "active_shift": "Shift Aktif",
     "today_attendance": "Absensi Hari Ini",
     "recent_activity": "Aktivitas Terbaru",
@@ -9,7 +9,7 @@
     "this_week": "MINGGU INI",
     "hours": "JAM",
     "total_hours": "Jam",
-    "office_location": "Lokasi Kantor",
+    "office_location": "Lokasi Sekolah",
     "selfie_gps": "Selfie & GPS",
     "check_in": "Masuk",
     "check_out": "Keluar",

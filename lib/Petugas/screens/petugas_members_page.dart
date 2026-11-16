@@ -1072,19 +1072,19 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
     switch (eventType.toLowerCase()) {
       case 'check_in':
         color = const Color(0xFF10B981);
-        label = 'Check In';
+        label = 'Masuk';
         break;
       case 'check_out':
         color = const Color(0xFFEF4444);
-        label = 'Check Out';
+        label = 'Keluar';
         break;
       case 'break_start':
         color = const Color(0xFFF59E0B);
-        label = 'Break Start';
+        label = 'Mulai Istirahat';
         break;
       case 'break_end':
         color = const Color(0xFF3B82F6);
-        label = 'Break End';
+        label = 'Selesai Istirahat';
         break;
       default:
         color = Colors.grey;
@@ -3378,7 +3378,7 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
           child: Row(
             children: [
               Text(
-                'SORT BY',
+                'URUTKAN',
                 style: TextStyle(
                   fontSize: 9,
                   fontWeight: FontWeight.w900,
