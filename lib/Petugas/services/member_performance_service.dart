@@ -106,6 +106,7 @@ class MemberPerformanceService {
             department_id,
             position_id,
             employee_id,
+            nomor_absen,
             is_active,
             user_profiles!inner(
               id,
@@ -878,15 +879,22 @@ class MemberPerformanceService {
     final profile = member['user_profiles'] as Map<String, dynamic>?;
     if (profile == null) return 'Pengguna Tidak Dikenal';
 
-    final displayName = profile['display_name'] as String?;
-    if (displayName != null && displayName.trim().isNotEmpty) {
-      return displayName.trim();
-    }
-
-    final firstName = profile['first_name'] as String? ?? '';
-    final lastName = profile['last_name'] as String? ?? '';
+    final displayName = (profile['display_name'] as String? ?? '').trim();
+    final firstName = (profile['first_name'] as String? ?? '').trim();
+    final lastName = (profile['last_name'] as String? ?? '').trim();
     final fullName = '$firstName $lastName'.trim();
-    return fullName.isEmpty ? 'Pengguna Tidak Dikenal' : fullName;
+
+    final baseName = displayName.isNotEmpty
+        ? displayName
+        : (fullName.isEmpty ? 'Pengguna Tidak Dikenal' : fullName);
+
+    final rawAbsen = (member['nomor_absen'] as String? ?? '').trim();
+    if (rawAbsen.isEmpty) return baseName;
+
+    final parsed = int.tryParse(rawAbsen);
+    final formattedAbsen =
+        parsed != null ? parsed.toString().padLeft(2, '0') : rawAbsen;
+    return '$baseName - $formattedAbsen';
   }
 
   String _formatTimeAgo(String? eventTimeString) {

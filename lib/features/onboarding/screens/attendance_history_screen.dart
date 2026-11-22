@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import '../onboarding_copy.dart';
 import '../onboarding_tokens.dart';
 import '../painters/history_check_painter.dart';
-import '../permission_step.dart';
 
-/// Layar 3 (Penutup): Rekap kehadiran + persiapan izin perangkat (opsional)
-/// serta tombol "Masuk" dan "Daftar akun baru" di zona jempol.
+/// Layar 3 (Penutup): Rekap kehadiran otomatis + tombol "Masuk" & "Daftar akun baru".
+/// Menyimpan satu momen "senang" kecil lewat animasi path centang
+/// di CustomPainter ketika layar ini tampil.
 class AttendanceHistoryScreen extends StatefulWidget {
   const AttendanceHistoryScreen({
     super.key,
@@ -71,9 +71,9 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen>
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final bool isCompact = constraints.maxHeight < 520;
-        final double chartCardHeight =
-            (constraints.maxHeight * (isCompact ? 0.21 : 0.24))
-                .clamp(112.0, 148.0);
+        final double illustrationHeight =
+            (constraints.maxHeight * (isCompact ? 0.32 : 0.37))
+                .clamp(156.0, 240.0);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,51 +88,50 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen>
                   children: <Widget>[
                     SizedBox(
                       height: isCompact
-                          ? OnboardingSpacing.xs
-                          : OnboardingSpacing.sm,
+                          ? OnboardingSpacing.sm
+                          : OnboardingSpacing.md,
                     ),
                     FractionallySizedBox(
                       widthFactor: 0.94,
                       alignment: Alignment.centerLeft,
                       child: Container(
-                        height: chartCardHeight,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: OnboardingSpacing.md,
-                          vertical: 12,
-                        ),
+                        height: illustrationHeight,
+                        padding: const EdgeInsets.all(OnboardingSpacing.md),
                         decoration: BoxDecoration(
                           color: colors.primaryContainer,
                           borderRadius:
                               BorderRadius.circular(OnboardingRadius.lg),
                           border: Border.all(color: colors.outlineVariant),
                         ),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Expanded(
-                              flex: 5,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: <Widget>[
-                                  Text(
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: <Widget>[
+                                Flexible(
+                                  child: Text(
                                     OnboardingCopy.historySampleHeader,
                                     style: textTheme.labelSmall?.copyWith(
                                       color: colors.onPrimaryContainer,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
+                                ),
+                                const SizedBox(width: OnboardingSpacing.sm),
+                                Flexible(
+                                  child: Text(
                                     OnboardingCopy.historySampleMetric,
-                                    style: textTheme.titleMedium?.copyWith(
+                                    textAlign: TextAlign.end,
+                                    style: textTheme.bodyMedium?.copyWith(
                                       color: colors.onPrimaryContainer,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: OnboardingSpacing.sm),
+                            const SizedBox(height: OnboardingSpacing.sm),
                             Expanded(
-                              flex: 4,
                               child: Semantics(
                                 image: true,
                                 label:
@@ -161,29 +160,27 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen>
                     ),
                     SizedBox(
                       height: isCompact
-                          ? OnboardingSpacing.md
-                          : OnboardingSpacing.lg,
+                          ? OnboardingSpacing.lg
+                          : OnboardingSpacing.xl,
                     ),
                     Text(
                       OnboardingCopy.historyTag,
                       style: textTheme.labelSmall,
                     ),
-                    const SizedBox(height: OnboardingSpacing.xs),
+                    const SizedBox(height: OnboardingSpacing.sm),
                     FractionallySizedBox(
-                      widthFactor: 0.92,
+                      widthFactor: 0.88,
                       alignment: Alignment.centerLeft,
                       child: Text(
                         OnboardingCopy.historyTitle,
                         style: textTheme.headlineMedium,
                       ),
                     ),
-                    const SizedBox(height: OnboardingSpacing.sm),
+                    const SizedBox(height: OnboardingSpacing.md),
                     Text(
                       OnboardingCopy.historyDescription,
-                      style: textTheme.bodyMedium,
+                      style: textTheme.bodyLarge,
                     ),
-                    const SizedBox(height: OnboardingSpacing.md),
-                    const PermissionStep(),
                     const SizedBox(height: OnboardingSpacing.md),
                   ],
                 ),

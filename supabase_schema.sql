@@ -98,6 +98,7 @@ create table if not exists public.organization_members (
   organization_id integer not null,
   user_id uuid not null,
   employee_id text,
+  nomor_absen text,
   department_id integer,
   position_id integer,
   role_id integer,

@@ -367,6 +367,16 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
     }
   }
 
+  String _formatNomorAbsen(String? raw) {
+    final trimmed = (raw ?? '').trim();
+    if (trimmed.isEmpty) return '';
+    final parsed = int.tryParse(trimmed);
+    if (parsed != null) {
+      return parsed.toString().padLeft(2, '0');
+    }
+    return trimmed;
+  }
+
   String _getMemberName(Map<String, dynamic> member) {
     final profile = member['user_profiles'] as Map<String, dynamic>?;
     if (profile == null) return 'Unknown User';
@@ -374,18 +384,17 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
     final displayName = (profile['display_name'] as String? ?? '').trim();
     final firstName = (profile['first_name'] as String? ?? '').trim();
     final lastName = (profile['last_name'] as String? ?? '').trim();
-
     final fullName = '$firstName $lastName'.trim();
 
-    if (displayName.isNotEmpty) {
-      if (fullName.isNotEmpty &&
-          displayName.toLowerCase() != fullName.toLowerCase()) {
-        return '$displayName - $fullName';
-      }
-      return displayName;
-    }
+    final baseName = displayName.isNotEmpty
+        ? displayName
+        : (fullName.isEmpty ? 'Unknown User' : fullName);
 
-    return fullName.isEmpty ? 'Unknown User' : fullName;
+    final formattedAbsen = _formatNomorAbsen(member['nomor_absen']?.toString());
+    if (formattedAbsen.isNotEmpty) {
+      return '$baseName - $formattedAbsen';
+    }
+    return baseName;
   }
 
   String? _getMemberPhotoUrl(Map<String, dynamic> member) {
@@ -2463,6 +2472,10 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
     final TextEditingController employeeIdController = TextEditingController(
       text: member['employee_id'] ?? '',
     );
+    final TextEditingController nomorAbsenController = TextEditingController(
+      text: member['nomor_absen']?.toString() ?? '',
+    );
+    final bool canEditAbsen = _roleService.isAdmin(widget.memberData);
 
     int? selectedDeptId = member['department_id'] as int?;
     int? selectedPosId =
@@ -2862,6 +2875,17 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                     employeeIdController,
                     Icons.confirmation_number_outlined,
                   ),
+                  _buildEditField(
+                    'Nomor Absen',
+                    nomorAbsenController,
+                    Icons.format_list_numbered_rounded,
+                    keyboardType: TextInputType.number,
+                    readOnly: !canEditAbsen,
+                    hintText: 'Contoh: 07',
+                    helperText: canEditAbsen
+                        ? 'Ditampilkan di belakang nama (mis. Harits Ali Pawana - 07)'
+                        : 'Hanya Admin yang dapat mengubah nomor absen',
+                  ),
                   const Text(
                     'Jenis Kelamin',
                     style: TextStyle(
@@ -2908,6 +2932,9 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                           employeeIdController.text.trim(),
                           selectedDeptId,
                           selectedPosId,
+                          nomorAbsen: canEditAbsen
+                              ? _formatNomorAbsen(nomorAbsenController.text)
+                              : null,
                         );
                       },
                       style: ElevatedButton.styleFrom(
@@ -2942,6 +2969,9 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
     IconData icon, {
     TextInputType keyboardType = TextInputType.text,
     Widget? suffixIcon,
+    bool readOnly = false,
+    String? hintText,
+    String? helperText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2956,7 +2986,7 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
         ),
         const SizedBox(height: 8),
         Container(
-          margin: const EdgeInsets.only(bottom: 16),
+          margin: EdgeInsets.only(bottom: helperText != null ? 6 : 16),
           decoration: BoxDecoration(
             color: widget.isDarkMode
                 ? Colors.white.withOpacity(0.05)
@@ -2966,13 +2996,18 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
+            readOnly: readOnly,
             style: TextStyle(
-              color: widget.isDarkMode ? Colors.white : Colors.black87,
+              color: readOnly
+                  ? Colors.grey
+                  : (widget.isDarkMode ? Colors.white : Colors.black87),
               fontSize: 14,
             ),
             decoration: InputDecoration(
               prefixIcon: Icon(icon, size: 20, color: const Color(0xFF2563EB)),
               suffixIcon: suffixIcon,
+              hintText: hintText,
+              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
@@ -2981,6 +3016,18 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
             ),
           ),
         ),
+        if (helperText != null) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16, left: 2),
+            child: Text(
+              helperText,
+              style: TextStyle(
+                fontSize: 11,
+                color: widget.isDarkMode ? Colors.white54 : Colors.grey.shade600,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -3029,8 +3076,9 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
     Map<String, dynamic> profileData,
     String employeeId,
     int? departmentId,
-    int? positionId,
-  ) async {
+    int? positionId, {
+    String? nomorAbsen,
+  }) async {
     _showProcessingOverlay(context, 'Memperbarui profil...');
     try {
       await _supabase
@@ -3038,19 +3086,25 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
           .update(profileData)
           .eq('id', userId);
 
+      final Map<String, dynamic> memberUpdates = {
+        'employee_id': employeeId,
+        'department_id': departmentId,
+        'position_id': positionId,
+      };
+      if (nomorAbsen != null && _roleService.isAdmin(widget.memberData)) {
+        memberUpdates['nomor_absen'] = nomorAbsen.isEmpty ? null : nomorAbsen;
+      }
+
       await _supabase
           .from('organization_members')
-          .update({
-            'employee_id': employeeId,
-            'department_id': departmentId,
-            'position_id': positionId,
-          })
+          .update(memberUpdates)
           .eq('id', memberId);
 
       if (mounted) {
         Navigator.pop(context);
         _showSuccessSnackBar('Profil berhasil diperbarui!');
         _loadOrganizationMembersOptimized();
+        _applyFilters();
       }
     } catch (e) {
       if (mounted) {
@@ -3454,9 +3508,15 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
     int rank,
     bool isTopPerformer,
   ) {
-    final totalAttendance = performance['present_days'] as num? ?? 0;
-    final totalWorkMinutes = performance['total_work_minutes'] as num? ?? 0;
-    final workHours = (totalWorkMinutes.toDouble() / 60).toStringAsFixed(1);
+    final department = member['departments'] as Map<String, dynamic>?;
+    final position = member['positions'] as Map<String, dynamic>?;
+    final posTitle = (position?['title'] ?? position?['name']) as String?;
+    final deptName = department?['name'] as String?;
+    final classLabel = (posTitle != null && posTitle.trim().isNotEmpty)
+        ? posTitle.trim()
+        : (deptName != null && deptName.trim().isNotEmpty
+              ? deptName.trim()
+              : '-');
     final productivityScore =
         performance['productivity_score'] as double? ?? 0.0;
 
@@ -3531,35 +3591,24 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(
-                      Icons.calendar_today_outlined,
-                      size: 11,
-                      color: const Color(0xFF38BDF8),
+                    const Icon(
+                      Icons.school_outlined,
+                      size: 12,
+                      color: Color(0xFF38BDF8),
                     ),
                     const SizedBox(width: 4),
-                    Text(
-                      '$totalAttendance ${AppLanguage.tr('logs')}',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: widget.isDarkMode
-                            ? Colors.white54
-                            : Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Icon(
-                      Icons.access_time,
-                      size: 11,
-                      color: const Color(0xFF38BDF8),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$workHours${AppLanguage.tr('hrs_short')}',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: widget.isDarkMode
-                            ? Colors.white54
-                            : Colors.grey.shade600,
+                    Flexible(
+                      child: Text(
+                        classLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: widget.isDarkMode
+                              ? Colors.white54
+                              : Colors.grey.shade600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
