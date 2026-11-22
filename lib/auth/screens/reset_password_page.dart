@@ -23,6 +23,11 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   bool _obscureConfirm = true;
   bool _isLoading = false;
 
+  /// True setelah kata sandi berhasil diperbarui.
+  /// Mencegah layar "tautan tidak valid" muncul sekejap saat `signOut()`
+  /// mengosongkan session sebelum pindah ke halaman login.
+  bool _finished = false;
+
   final _supabase = Supabase.instance.client;
 
   @override
@@ -72,6 +77,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       await _supabase.auth.updateUser(
         UserAttributes(password: _passwordController.text.trim()),
       );
+
+      // Kata sandi sudah tersimpan: jangan tampilkan lagi layar
+      // "tautan tidak valid" ketika signOut() mengosongkan session.
+      if (mounted) {
+        setState(() => _finished = true);
+      }
 
       PasswordRecoveryState.reset();
 
@@ -138,6 +149,18 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Setelah password tersimpan, tampilkan indikator sampai berpindah ke
+    // halaman login. Tanpa ini, signOut() membuat session null dan layar
+    // "tautan tidak valid" sempat muncul beberapa detik.
+    if (_finished) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF8FAFC),
+        body: Center(
+          child: CircularProgressIndicator(color: _primary),
+        ),
+      );
+    }
+
     final hasSession = _hasRecoverySession;
 
     return Scaffold(
