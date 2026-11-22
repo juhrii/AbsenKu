@@ -1,0 +1,6 @@
+project_id = "wfyijokzozgzbygnlijj"
+
+# App memanggil function ini tanpa login (anon/publishable key),
+# jadi verifikasi JWT dimatikan. Pengamannya ada di DEMO_EMAIL_ALLOWLIST.
+[functions.demo-reset-link]
+verify_jwt = false

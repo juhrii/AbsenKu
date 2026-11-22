@@ -7,6 +7,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'signup.dart';
+import 'forgot_password_page.dart';
 import '../../helpers/language_helper.dart';
 import '../services/role_service.dart';
 
@@ -498,7 +499,11 @@ class _ModernLoginScreenState extends State<ModernLoginScreen> {
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
-                              // Forgot password logic
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const ForgotPasswordPage(),
+                                ),
+                              );
                             },
                             style: TextButton.styleFrom(
                               padding: EdgeInsets.zero,

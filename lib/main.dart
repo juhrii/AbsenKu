@@ -1,8 +1,13 @@
 import 'dart:io';
+import 'dart:async';
+import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
 import 'package:absenku/helpers/language_helper.dart';
 import 'package:absenku/auth/screens/login.dart';
 import 'package:absenku/auth/screens/onboarding_screen.dart';
+import 'package:absenku/auth/screens/reset_password_page.dart';
+import 'package:absenku/auth/services/password_recovery_state.dart';
 import 'package:absenku/Petugas/screens/petugas_dashboard.dart';
 import 'package:absenku/User/screens/user_dashboard.dart';
 import 'package:absenku/auth/services/role_service.dart';
@@ -20,6 +25,45 @@ import 'package:sqflite/sqflite.dart';
 
 // ✅ Global instance of ObjectBox for simplified access
 late ObjectBoxService objectBox;
+
+// Subscription ke event auth (dipakai untuk menangkap deep link reset password)
+StreamSubscription<AuthState>? authStateSubscription;
+
+/// Membuka halaman reset password jika Supabase mengirim event
+/// [AuthChangeEvent.passwordRecovery] (link dari email reset password).
+void openPasswordRecoveryIfNeeded() {
+  if (!PasswordRecoveryState.active || PasswordRecoveryState.opened) return;
+
+  final navigator = appNavigatorKey.currentState;
+  if (navigator == null) return;
+
+  PasswordRecoveryState.opened = true;
+  navigator.pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const ResetPasswordPage()),
+    (route) => false,
+  );
+}
+
+bool _isPasswordRecoveryUri(Uri? uri) {
+  if (uri == null) return false;
+  final link = uri.toString().toLowerCase();
+  return link.contains('type=recovery') || link.contains('type%3drecovery');
+}
+
+/// Saat aplikasi di-kill lalu dibuka dari link email, `Supabase.initialize`
+/// sudah memproses deep link sebelum listener kita terpasang. Karena itu URL
+/// awal dicek manual agar halaman reset password tetap terbuka.
+Future<void> _detectInitialPasswordRecoveryLink() async {
+  try {
+    final Uri? uri = kIsWeb ? Uri.base : await AppLinks().getInitialLink();
+    if (_isPasswordRecoveryUri(uri)) {
+      PasswordRecoveryState.markActive();
+      debugPrint('✅ Deep link reset password terdeteksi saat startup');
+    }
+  } catch (e) {
+    debugPrint('Gagal memeriksa deep link awal: $e');
+  }
+}
 
 // ==============================================
 // FUNGSI UNTUK MENGHAPUS DATABASE LAMA
@@ -71,6 +115,18 @@ Future<void> main() async {
     url: 'https://wfyijokzozgzbygnlijj.supabase.co',
     anonKey: 'sb_publishable_78QtlrW-ofScaiM66R37Lw_H1jGhTJi',
   );
+
+  // Dengarkan deep link reset password (io.absenku.app://reset-callback)
+  authStateSubscription =
+      Supabase.instance.client.auth.onAuthStateChange.listen((state) {
+    if (state.event == AuthChangeEvent.passwordRecovery) {
+      PasswordRecoveryState.markActive();
+      openPasswordRecoveryIfNeeded();
+    }
+  });
+
+  await _detectInitialPasswordRecoveryLink();
+
   await AppLanguage.init();
   await initializeDateFormatting('id_ID', null);
   await initializeDateFormatting('en_US', null);
@@ -106,6 +162,7 @@ class MyApp extends StatelessWidget {
       builder: (context, languageCode, _) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
+          navigatorKey: appNavigatorKey,
           title: 'AbsenKu',
           locale: Locale(languageCode),
           themeMode: themeProvider.isDarkMode
@@ -236,6 +293,10 @@ class _SplashScreenState extends State<SplashScreen>
   // ==============================================
   Future<void> _checkAuthAndNavigate() async {
     if (!mounted) return;
+
+    // Jika aplikasi dibuka lewat link reset password, tampilkan halaman reset.
+    openPasswordRecoveryIfNeeded();
+    if (PasswordRecoveryState.active) return;
 
     final session = Supabase.instance.client.auth.currentSession;
 
