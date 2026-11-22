@@ -884,9 +884,20 @@ class MemberPerformanceService {
     final lastName = (profile['last_name'] as String? ?? '').trim();
     final fullName = '$firstName $lastName'.trim();
 
-    final baseName = displayName.isNotEmpty
-        ? displayName
-        : (fullName.isEmpty ? 'Pengguna Tidak Dikenal' : fullName);
+    final bool hasFullName = firstName.isNotEmpty && lastName.isNotEmpty;
+    final String baseName;
+    if (displayName.isNotEmpty &&
+        (!hasFullName ||
+            displayName.contains(' ') ||
+            displayName.toLowerCase() == fullName.toLowerCase())) {
+      baseName = displayName;
+    } else if (fullName.isNotEmpty) {
+      baseName = fullName;
+    } else if (displayName.isNotEmpty) {
+      baseName = displayName;
+    } else {
+      baseName = 'Pengguna Tidak Dikenal';
+    }
 
     final rawAbsen = (member['nomor_absen'] as String? ?? '').trim();
     if (rawAbsen.isEmpty) return baseName;

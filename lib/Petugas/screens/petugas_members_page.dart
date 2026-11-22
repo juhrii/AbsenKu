@@ -386,9 +386,20 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
     final lastName = (profile['last_name'] as String? ?? '').trim();
     final fullName = '$firstName $lastName'.trim();
 
-    final baseName = displayName.isNotEmpty
-        ? displayName
-        : (fullName.isEmpty ? 'Unknown User' : fullName);
+    final bool hasFullName = firstName.isNotEmpty && lastName.isNotEmpty;
+    final String baseName;
+    if (displayName.isNotEmpty &&
+        (!hasFullName ||
+            displayName.contains(' ') ||
+            displayName.toLowerCase() == fullName.toLowerCase())) {
+      baseName = displayName;
+    } else if (fullName.isNotEmpty) {
+      baseName = fullName;
+    } else if (displayName.isNotEmpty) {
+      baseName = displayName;
+    } else {
+      baseName = 'Unknown User';
+    }
 
     final formattedAbsen = _formatNomorAbsen(member['nomor_absen']?.toString());
     if (formattedAbsen.isNotEmpty) {
@@ -2918,14 +2929,42 @@ class _PetugasMembersPageState extends State<PetugasMembersPage>
                     height: 52,
                     child: ElevatedButton(
                       onPressed: () async {
+                        final String oldDisplay =
+                            (profile['display_name'] as String? ?? '').trim();
+                        final String oldFirst =
+                            (profile['first_name'] as String? ?? '').trim();
+                        final String oldLast =
+                            (profile['last_name'] as String? ?? '').trim();
+
+                        final String newDisplay =
+                            displayNameController.text.trim();
+                        final String newFirst = firstNameController.text.trim();
+                        final String newLast = lastNameController.text.trim();
+                        final String newFullName = '$newFirst $newLast'.trim();
+
+                        final bool namePartsChanged =
+                            newFirst != oldFirst || newLast != oldLast;
+                        final bool displayUnchanged = newDisplay == oldDisplay;
+
+                        // Jika Admin mengubah Nama Depan / Nama Belakang tanpa
+                        // mengubah Nama Tampilan secara manual, sinkronkan Nama
+                        // Tampilan agar perubahan langsung terlihat di daftar.
+                        final String resolvedDisplayName =
+                            (namePartsChanged &&
+                                    displayUnchanged &&
+                                    newFullName.isNotEmpty) ||
+                                newDisplay.isEmpty
+                            ? (newFullName.isNotEmpty ? newFullName : newDisplay)
+                            : newDisplay;
+
                         Navigator.pop(context);
                         _handleUpdateProfile(
                           userId,
                           memberId,
                           {
-                            'display_name': displayNameController.text.trim(),
-                            'first_name': firstNameController.text.trim(),
-                            'last_name': lastNameController.text.trim(),
+                            'display_name': resolvedDisplayName,
+                            'first_name': newFirst,
+                            'last_name': newLast,
                             'phone': phoneController.text.trim(),
                             'jenis_kelamin': selectedGender,
                           },
