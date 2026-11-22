@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
 import 'package:absenku/helpers/language_helper.dart';
 import 'package:absenku/auth/screens/login.dart';
-import 'package:absenku/auth/screens/onboarding_screen.dart';
+import 'package:absenku/features/onboarding/onboarding_page.dart';
 import 'package:absenku/auth/screens/reset_password_page.dart';
 import 'package:absenku/auth/services/password_recovery_state.dart';
 import 'package:absenku/Petugas/screens/petugas_dashboard.dart';
@@ -306,7 +306,7 @@ class _SplashScreenState extends State<SplashScreen>
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+        MaterialPageRoute(builder: (context) => const OnboardingPage()),
       );
       return;
     }

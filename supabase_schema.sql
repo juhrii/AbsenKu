@@ -664,7 +664,7 @@ $$;
 
 -- Buat Akun Terpisah untuk masing-masing Role:
 select public.upsert_role_account('admin@gmail.com', 'Admin123!', 'Admin', 'AbsenKu', 'Admin AbsenKu', 'ADM001', 1);
-select public.upsert_role_account('absenku@gmail.com', 'AbsenKu123!', 'Admin', 'Utama', 'Admin Utama', 'ADM002', 1);
+select public.upsert_role_account('absenku@gmail.com', 'AbsenKu123!', 'Admin', '', 'Admin', 'ADM002', 1);
 select public.upsert_role_account('petugas@gmail.com', 'Petugas123!', 'Petugas', 'AbsenKu', 'Petugas AbsenKu', 'PTG001', 3);
 select public.upsert_role_account('superadmin@gmail.com', 'SuperAdmin123!', 'Super', 'Admin', 'Super Admin AbsenKu', 'SUP001', 4);
 select public.upsert_role_account('siswa@gmail.com', 'Siswa123!', 'Siswa', 'AbsenKu', 'Siswa AbsenKu', 'NIS005', 2);
